@@ -49,7 +49,7 @@ class FileEventHandler(PatternMatchingEventHandler):
                 if rclone_delete(remote_path):
                     logger.debug("Deleted %r", remote_path)
                 else:
-                    logger.debug("Error deleting %r", remote_path)
+                    logger.debug("Failed to delete %r", remote_path)
             else:
                 logger.debug("File was ignored, it was not found at %r", cloud_path)
 
