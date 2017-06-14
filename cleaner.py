@@ -16,7 +16,7 @@ remote_folder = "google:"
 cloud_folder = "/home/seed/media/gcd"
 
 # Setup logging
-logFormatter = logging.Formatter('%(asctime)24s - %(name)-8s - %(funcName)10s() :: %(message)s')
+logFormatter = logging.Formatter('%(asctime)24s - %(name)-8s - %(funcName)12s() :: %(message)s')
 rootLogger = logging.getLogger()
 
 consoleHandler = logging.StreamHandler()
@@ -76,10 +76,10 @@ def start(local_folder):
         observer = Observer()
         observer.schedule(event_handler, path=local_folder, recursive=True)
         observer.start()
-        logger.info("Started file monitor for: %s", local_folder)
+        logger.info("Started file monitor for %r", local_folder)
         observer.join()
     else:
-        logger.debug("File monitor already started, or %s is not a valid path.", local_folder)
+        logger.debug("File monitor already started, or %r is not a valid path.", local_folder)
 
 
 def stop():
