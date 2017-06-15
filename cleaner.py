@@ -22,7 +22,7 @@ cloud_folder = "/home/seed/media/gcd"  # mount location of read/write folder
 local_folder = "/home/seed/media/local/Media"  # local folder to upload
 local_remote = "google:/Media"  # remote folder location of local_folder
 local_folder_size = 250  # max size of local_folder in gigabytes before moving content
-local_folder_check_interval = 30  # minutes to check size of local_folder
+local_folder_check_interval = 60  # minutes to check size of local_folder
 rclone_transfers = 8  # number of transfers to use with rclone move (--transfers=8)
 rclone_checkers = 16  # number of checkers to use with rclone move (--checkers=16)
 rclone_rmdirs = [
@@ -31,6 +31,8 @@ rclone_rmdirs = [
     '/home/seed/media/local/Media/Movies',
     '/home/seed/media/local/Media/TV'
 ]
+pushover_user_token = None  # your pushover user token - upload notifications are sent here
+pushover_app_token = None  # your pushover app token - required to send notifications
 
 # Setup logging
 logFormatter = logging.Formatter('%(asctime)24s - %(name)-8s - %(funcName)12s() :: %(message)s')
@@ -81,9 +83,29 @@ def upload_manager():
                 if size >= local_folder_size:
                     logger.debug("Local folder has %d gigabytes, %d too many!",
                                  size, size - local_folder_size)
-                    logger.debug("Moving data from %r to %r...", local_folder, local_remote)
+
+                    # check if files are opened, skip this upload if so
+                    opened_files = utils.opened_files(local_folder)
+                    if opened_files:
+                        for item in opened_files:
+                            logger.debug("File is being accessed: %r", item)
+                        logger.debug("Local folder has %d file(s) open, skipping upload until next check...",
+                                     len(opened_files))
+                        # send skip notification
+                        if pushover_app_token and pushover_user_token:
+                            utils.send_pushover(pushover_app_token, pushover_user_token,
+                                                "Upload process of %d gigabytes temporarily skipped.\n"
+                                                "%d file(s) are currently being accessed." %
+                                                (size, len(opened_files)))
+                        continue
+
+                    # send start notification
+                    if pushover_app_token and pushover_user_token:
+                        utils.send_pushover(pushover_app_token, pushover_user_token,
+                                            "Upload process started. %d gigabytes to upload" % size)
 
                     # rclone move local_folder to local_remote
+                    logger.debug("Moving data from %r to %r...", local_folder, local_remote)
                     upload_cmd = 'rclone move "%s" "%s"' \
                                  ' --delete-after' \
                                  ' --no-traverse' \
@@ -116,12 +138,18 @@ def upload_manager():
                     new_size = utils.folder_size(local_folder)
                     logger.debug("Local folder is now left with %d gigabytes", new_size)
 
+                    # send finish notification
+                    if pushover_app_token and pushover_user_token:
+                        utils.send_pushover(pushover_app_token, pushover_user_token,
+                                            "Upload process finished in %d seconds. %d gigabytes left over." %
+                                            (time_taken, new_size))
+
                 else:
                     logger.debug("Local folder is still under the max size by %d gigabytes",
                                  local_folder_size - size)
 
     except Exception as ex:
-        logger.error("Exception occurred:\n%s", ex)
+        logger.exception("Exception occurred: ")
 
 
 def start(path):

@@ -1,7 +1,9 @@
+import http.client
 import logging
 import os
 import shlex
 import subprocess
+from urllib import parse
 
 logger = logging.getLogger("UTILS")
 logger.setLevel(logging.DEBUG)
@@ -33,7 +35,7 @@ def folder_size(path):
             return int(data)
 
     except Exception as ex:
-        logger.error("Exception calculating size of %r:\n%s", path, ex)
+        logger.exception("Exception calculating size of %r: ", path)
         return None
 
 
@@ -47,5 +49,42 @@ def rclone_delete(path):
         else:
             return True
     except Exception as ex:
-        logger.error("Exception deleting %r:\n%s", path, ex)
+        logger.exception("Exception deleting %r: ", path)
         return False
+
+
+def opened_files(path):
+    files = []
+
+    try:
+        process = os.popen('lsof -Fn +D "%s" | tail -n +2 | cut -c2-' % path)
+        data = process.read()
+        process.close()
+        for item in data.split('\n'):
+            if not item or len(item) <= 2 or os.path.isdir(item):
+                continue
+            if not item.isdigit():
+                files.append(item)
+
+        return files
+
+    except Exception as ex:
+        logger.exception("Exception checking %r: ", path)
+        return None
+
+
+def send_pushover(app_token, user_token, message):
+    try:
+        conn = http.client.HTTPSConnection("api.pushover.net:443")
+        conn.request("POST", "/1/messages.json", parse.urlencode({
+            'token': app_token,
+            'user': user_token,
+            'message': message
+        }), {"Content-Type": "application/x-www-form-urlencoded"})
+        resp = conn.getresponse()
+        conn.close()
+        return True if resp.status == 200 else False
+
+    except Exception as ex:
+        logger.exception("Error sending notification to %r", user_token)
+    return False
