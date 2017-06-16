@@ -26,9 +26,9 @@ def run_command(command):
     return rc
 
 
-def folder_size(path):
+def folder_size(path, excludes):
     try:
-        process = os.popen('du -s --block-size=1G %s | cut -f1' % path)
+        process = os.popen(du_size_command(path, excludes))
         data = process.read()
         process.close()
         if data is not None and int(data) > 0:
@@ -53,7 +53,7 @@ def rclone_delete(path):
         return False
 
 
-def opened_files(path):
+def opened_files(path, excludes):
     files = []
 
     try:
@@ -64,6 +64,9 @@ def opened_files(path):
             if not item or len(item) <= 2 or os.path.isdir(item):
                 continue
             if not item.isdigit():
+                for exclude in excludes:
+                    if exclude.lower() in item.lower():
+                        continue
                 files.append(item)
 
         return files
@@ -88,3 +91,25 @@ def send_pushover(app_token, user_token, message):
     except Exception as ex:
         logger.exception("Error sending notification to %r", user_token)
     return False
+
+
+def rclone_move_command(local, remote, transfers, checkers, excludes):
+    upload_cmd = 'rclone move "%s" "%s"' \
+                 ' --delete-after' \
+                 ' --no-traverse' \
+                 ' --stats=60s' \
+                 ' -v' \
+                 ' --transfers=%d' \
+                 ' --checkers=%d' % \
+                 (local, remote, transfers, checkers)
+    for item in excludes:
+        upload_cmd += ' --exclude="%s"' % item
+    return upload_cmd
+
+
+def du_size_command(path, excludes):
+    size_cmd = "du -s --block-size=1G"
+    for item in excludes:
+        size_cmd += ' --exclude="%s"' % item
+    size_cmd += ' "%s" | cut -f1' % path
+    return size_cmd

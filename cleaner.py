@@ -23,6 +23,12 @@ local_folder = "/home/seed/media/local/Media"  # local folder to upload
 local_remote = "google:/Media"  # remote folder location of local_folder
 local_folder_size = 250  # max size of local_folder in gigabytes before moving content
 local_folder_check_interval = 60  # minutes to check size of local_folder
+du_excludes = [
+    # folders to be excluded for the du -s --block-side=1G "local_folder" e.g "downloads"
+]
+lsof_excludes = [
+    # folders to be excluded from the lsof command, if path contains it, ignore it, e.g. "/downloads/"
+]
 rclone_transfers = 8  # number of transfers to use with rclone move (--transfers=8)
 rclone_checkers = 16  # number of checkers to use with rclone move (--checkers=16)
 rclone_rmdirs = [
@@ -30,6 +36,13 @@ rclone_rmdirs = [
     # remember this folder can be removed too, so always go one step deeper than local_folder
     '/home/seed/media/local/Media/Movies',
     '/home/seed/media/local/Media/TV'
+]
+rclone_excludes = [
+    # exclusions for the rclone move "local_folder" "local_remote"
+    '**partial~',
+    '**_HIDDEN',
+    '.unionfs/**',
+    '.unionfs-fuse/**',
 ]
 pushover_user_token = None  # your pushover user token - upload notifications are sent here
 pushover_app_token = None  # your pushover app token - required to send notifications
@@ -78,14 +91,14 @@ def upload_manager():
         while True:
             time.sleep(60 * local_folder_check_interval)
             logger.debug("Checking size of %r", local_folder)
-            size = utils.folder_size(local_folder)
+            size = utils.folder_size(local_folder, du_excludes)
             if size is not None and size > 0:
                 if size >= local_folder_size:
                     logger.debug("Local folder has %d gigabytes, %d too many!",
                                  size, size - local_folder_size)
 
                     # check if files are opened, skip this upload if so
-                    opened_files = utils.opened_files(local_folder)
+                    opened_files = utils.opened_files(local_folder, lsof_excludes)
                     if opened_files:
                         for item in opened_files:
                             logger.debug("File is being accessed: %r", item)
@@ -106,17 +119,8 @@ def upload_manager():
 
                     # rclone move local_folder to local_remote
                     logger.debug("Moving data from %r to %r...", local_folder, local_remote)
-                    upload_cmd = 'rclone move "%s" "%s"' \
-                                 ' --delete-after' \
-                                 ' --no-traverse' \
-                                 ' --stats=60s' \
-                                 ' -v' \
-                                 ' --transfers=%d' \
-                                 ' --checkers=%d' \
-                                 ' --exclude="**partial~"' \
-                                 ' --exclude="**_HIDDEN"' \
-                                 ' --exclude=".unionfs/**"' % \
-                                 (local_folder, local_remote, rclone_transfers, rclone_checkers)
+                    upload_cmd = utils.rclone_move_command(local_folder, local_remote, rclone_transfers,
+                                                           rclone_checkers, rclone_excludes)
                     logger.debug("Using: %r", upload_cmd)
 
                     start_time = timeit.default_timer()
@@ -135,7 +139,7 @@ def upload_manager():
                         if clearing:
                             logger.debug("Finished clearing empty directories")
 
-                    new_size = utils.folder_size(local_folder)
+                    new_size = utils.folder_size(local_folder, du_excludes)
                     logger.debug("Local folder is now left with %d gigabytes", new_size)
 
                     # send finish notification
