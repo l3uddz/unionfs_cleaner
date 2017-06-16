@@ -94,7 +94,7 @@ def upload_manager():
                     # send start notification
                     if config['pushover_app_token'] and config['pushover_user_token']:
                         utils.send_pushover(config['pushover_app_token'], config['pushover_user_token'],
-                                            "Upload process started. %d gigabytes to upload" % size)
+                                            "Upload process started. %d gigabytes to upload." % size)
 
                     # rclone move local_folder to local_remote
                     logger.debug("Moving data from %r to %r...", config['local_folder'], config['local_remote'])
@@ -110,17 +110,21 @@ def upload_manager():
 
                     # rclone rmdirs specified directories
                     if len(config['rclone_rmdirs']):
-                        clearing = False
-                        for dir in config['rclone_rmdirs']:
-                            if os.path.exists(dir):
-                                clearing = True
-                                logger.debug("Removing empty directories from %r", dir)
-                                cmd = 'rclone rmdirs "%s"' % dir
-                                if config['dry_run']:
-                                    cmd += ' --dry-run'
-                                utils.run_command(cmd)
-                        if clearing:
-                            logger.debug("Finished clearing empty directories")
+                        opened_files = utils.opened_files(config['local_folder'], config['lsof_excludes'])
+                        if not len(opened_files):
+                            clearing = False
+                            for dir in config['rclone_rmdirs']:
+                                if os.path.exists(dir):
+                                    clearing = True
+                                    logger.debug("Removing empty directories from %r", dir)
+                                    cmd = 'rclone rmdirs "%s"' % dir
+                                    if config['dry_run']:
+                                        cmd += ' --dry-run'
+                                    utils.run_command(cmd)
+                            if clearing:
+                                logger.debug("Finished clearing empty directories")
+                        else:
+                            logger.debug("Skipped rclone rmdirs because %d files are currently open", len(opened_files))
 
                     new_size = utils.folder_size(config['local_folder'], config['du_excludes'])
                     logger.debug("Local folder is now left with %d gigabytes", new_size)
