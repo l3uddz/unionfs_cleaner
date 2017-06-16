@@ -1,4 +1,5 @@
 #!/usr/bin/env python3.5
+import json
 import logging
 import os
 import time
@@ -14,38 +15,6 @@ import utils
 ############################################################
 # INIT
 ############################################################
-
-# Config
-unionfs_folder = "/home/seed/media/local/.unionfs"  # .unionfs location inside unionfs read/write folder
-remote_folder = "google:"  # rclone remote
-cloud_folder = "/home/seed/media/gcd"  # mount location of read/write folder
-local_folder = "/home/seed/media/local/Media"  # local folder to upload
-local_remote = "google:/Media"  # remote folder location of local_folder
-local_folder_size = 250  # max size of local_folder in gigabytes before moving content
-local_folder_check_interval = 60  # minutes to check size of local_folder
-du_excludes = [
-    # folders to be excluded for the du -s --block-side=1G "local_folder" e.g "downloads"
-]
-lsof_excludes = [
-    # folders to be excluded from the lsof command, if path contains it, ignore it, e.g. "/downloads/"
-]
-rclone_transfers = 8  # number of transfers to use with rclone move (--transfers=8)
-rclone_checkers = 16  # number of checkers to use with rclone move (--checkers=16)
-rclone_rmdirs = [
-    # folders to clear with rclone rmdirs after upload
-    # remember this folder can be removed too, so always go one step deeper than local_folder
-    '/home/seed/media/local/Media/Movies',
-    '/home/seed/media/local/Media/TV'
-]
-rclone_excludes = [
-    # exclusions for the rclone move "local_folder" "local_remote"
-    '**partial~',
-    '**_HIDDEN',
-    '.unionfs/**',
-    '.unionfs-fuse/**',
-]
-pushover_user_token = None  # your pushover user token - upload notifications are sent here
-pushover_app_token = None  # your pushover app token - required to send notifications
 
 # Setup logging
 logFormatter = logging.Formatter('%(asctime)24s - %(name)-8s - %(funcName)12s() :: %(message)s')
@@ -66,6 +35,16 @@ logger.setLevel(logging.DEBUG)
 
 observer = None
 
+# Config
+config = None
+if os.path.exists('config.json'):
+    config = utils.config_load()
+else:
+    config = utils.build_config()
+    exit(0)
+
+logger.debug("Using config:\n%s", json.dumps(config, sort_keys=True, indent=4))
+
 
 # file monitor events
 class FileEventHandler(PatternMatchingEventHandler):
@@ -73,11 +52,11 @@ class FileEventHandler(PatternMatchingEventHandler):
         super(FileEventHandler, self).on_created(event)
         if event.src_path.endswith('_HIDDEN~'):
             logger.info("File %r was created" % event.src_path)
-            cloud_path = event.src_path.replace(unionfs_folder, cloud_folder).rstrip('_HIDDEN~')
-            remote_path = event.src_path.replace(unionfs_folder, remote_folder).rstrip('_HIDDEN~')
+            cloud_path = event.src_path.replace(config['unionfs_folder'], config['cloud_folder']).rstrip('_HIDDEN~')
+            remote_path = event.src_path.replace(config['unionfs_folder'], config['remote_folder']).rstrip('_HIDDEN~')
             if os.path.exists(cloud_path):
                 logger.debug("Removing %r" % remote_path)
-                if utils.rclone_delete(remote_path):
+                if utils.rclone_delete(remote_path, config['dry_run']):
                     logger.debug("Deleted %r", remote_path)
                 else:
                     logger.debug("Failed to delete %r", remote_path)
@@ -87,40 +66,41 @@ class FileEventHandler(PatternMatchingEventHandler):
 
 def upload_manager():
     try:
-        logger.debug("Started upload manager for %r", local_folder)
+        logger.debug("Started upload manager for %r", config['local_folder'])
         while True:
-            time.sleep(60 * local_folder_check_interval)
-            logger.debug("Checking size of %r", local_folder)
-            size = utils.folder_size(local_folder, du_excludes)
+            time.sleep(60 * config['local_folder_check_interval'])
+            logger.debug("Checking size of %r", config['local_folder'])
+            size = utils.folder_size(config['local_folder'], config['du_excludes'])
             if size is not None and size > 0:
-                if size >= local_folder_size:
+                if size >= config['local_folder_size']:
                     logger.debug("Local folder has %d gigabytes, %d too many!",
-                                 size, size - local_folder_size)
+                                 size, size - config['local_folder_size'])
 
                     # check if files are opened, skip this upload if so
-                    opened_files = utils.opened_files(local_folder, lsof_excludes)
+                    opened_files = utils.opened_files(config['local_folder'], config['lsof_excludes'])
                     if opened_files:
                         for item in opened_files:
                             logger.debug("File is being accessed: %r", item)
                         logger.debug("Local folder has %d file(s) open, skipping upload until next check...",
                                      len(opened_files))
                         # send skip notification
-                        if pushover_app_token and pushover_user_token:
-                            utils.send_pushover(pushover_app_token, pushover_user_token,
+                        if config['pushover_app_token'] and config['pushover_user_token']:
+                            utils.send_pushover(config['pushover_app_token'], config['pushover_user_token'],
                                                 "Upload process of %d gigabytes temporarily skipped.\n"
                                                 "%d file(s) are currently being accessed." %
                                                 (size, len(opened_files)))
                         continue
 
                     # send start notification
-                    if pushover_app_token and pushover_user_token:
-                        utils.send_pushover(pushover_app_token, pushover_user_token,
+                    if config['pushover_app_token'] and config['pushover_user_token']:
+                        utils.send_pushover(config['pushover_app_token'], config['pushover_user_token'],
                                             "Upload process started. %d gigabytes to upload" % size)
 
                     # rclone move local_folder to local_remote
-                    logger.debug("Moving data from %r to %r...", local_folder, local_remote)
-                    upload_cmd = utils.rclone_move_command(local_folder, local_remote, rclone_transfers,
-                                                           rclone_checkers, rclone_excludes)
+                    logger.debug("Moving data from %r to %r...", config['local_folder'], config['local_remote'])
+                    upload_cmd = utils.rclone_move_command(config['local_folder'], config['local_remote'],
+                                                           config['rclone_transfers'], config['rclone_checkers'],
+                                                           config['rclone_excludes'], config['dry_run'])
                     logger.debug("Using: %r", upload_cmd)
 
                     start_time = timeit.default_timer()
@@ -129,28 +109,31 @@ def upload_manager():
                     logger.debug("Moving finished in %d seconds", time_taken)
 
                     # rclone rmdirs specified directories
-                    if len(rclone_rmdirs):
+                    if len(config['rclone_rmdirs']):
                         clearing = False
-                        for dir in rclone_rmdirs:
+                        for dir in config['rclone_rmdirs']:
                             if os.path.exists(dir):
                                 clearing = True
                                 logger.debug("Removing empty directories from %r", dir)
-                                utils.run_command('rclone rmdirs "%s"' % dir)
+                                cmd = 'rclone rmdirs "%s"' % dir
+                                if config['dry_run']:
+                                    cmd += ' --dry-run'
+                                utils.run_command(cmd)
                         if clearing:
                             logger.debug("Finished clearing empty directories")
 
-                    new_size = utils.folder_size(local_folder, du_excludes)
+                    new_size = utils.folder_size(config['local_folder'], config['du_excludes'])
                     logger.debug("Local folder is now left with %d gigabytes", new_size)
 
                     # send finish notification
-                    if pushover_app_token and pushover_user_token:
-                        utils.send_pushover(pushover_app_token, pushover_user_token,
+                    if config['pushover_app_token'] and config['pushover_user_token']:
+                        utils.send_pushover(config['pushover_app_token'], config['pushover_user_token'],
                                             "Upload process finished in %d seconds. %d gigabytes left over." %
                                             (time_taken, new_size))
 
                 else:
                     logger.debug("Local folder is still under the max size by %d gigabytes",
-                                 local_folder_size - size)
+                                 config['local_folder_size'] - size)
 
     except Exception as ex:
         logger.exception("Exception occurred: ")
@@ -168,12 +151,14 @@ def start(path):
         logger.info("Started file monitor for %r", path)
 
         # start upload manager
-        upload_process = Process(target=upload_manager)
-        upload_process.start()
+        if config['use_upload_manager']:
+            upload_process = Process(target=upload_manager)
+            upload_process.start()
 
         # join and wait finish
         observer.join()
-        upload_process.join()
+        if config['use_upload_manager']:
+            upload_process.join()
         logger.debug("Finished monitoring and uploading")
 
     else:
@@ -192,4 +177,4 @@ def stop():
 
 
 if __name__ == "__main__":
-    start(unionfs_folder)
+    start(config['unionfs_folder'])
