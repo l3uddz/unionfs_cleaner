@@ -165,6 +165,7 @@ base_config = {
     'pushover_user_token': '',  # your pushover user token - upload notifications are sent here
     'pushover_app_token': '',  # your pushover user token - upload notifications are sent here
     'use_upload_manager': False,  # whether or not to start the upload manager upon script start
+    'use_git_autoupdater': False,  # whether to automatically update (git pull) when theres a new commit on script start
     'dry_run': True,  # whether or not to use dry-run with rclone so no files are deleted/moved. use to verify working.
 }
 
@@ -208,6 +209,4 @@ def build_config():
         logger.debug("Created default config.json, please configure it before running me again.")
         exit(0)
 
-############################################################
-# UPDATER STUFF
-############################################################
+

@@ -11,6 +11,7 @@ from multiprocessing import Process
 from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
 
+import updater
 import utils
 
 ############################################################
@@ -201,6 +202,13 @@ def exit_gracefully(signum, frame):
 
 
 if __name__ == "__main__":
+    logger.debug("Current branch: %s", updater.active_branch())
+    logger.debug("Current version: %s", updater.current_version())
+    logger.debug("Latest version: %s", updater.latest_version())
+    if config['use_git_autoupdater'] and updater.update():
+        logger.debug("Restarting...")
+        exit(1)
+
     signal.signal(signal.SIGINT, exit_gracefully)
     signal.signal(signal.SIGTERM, exit_gracefully)
     start(config['unionfs_folder'])
