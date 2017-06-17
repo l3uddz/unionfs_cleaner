@@ -3,13 +3,17 @@ import json
 import logging
 import os
 import signal
+import sys
 import time
 import timeit
 from logging.handlers import RotatingFileHandler
 from multiprocessing import Process
 
-from watchdog.events import PatternMatchingEventHandler
-from watchdog.observers import Observer
+try:
+    from watchdog.events import PatternMatchingEventHandler
+    from watchdog.observers import Observer
+except ImportError:
+    sys.exit("You need to install the watchdog requirement, e.g. sudo pip3.5 install watchdog")
 
 import updater
 import utils

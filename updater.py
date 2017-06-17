@@ -1,6 +1,11 @@
 import logging
 
-import git
+import sys
+
+try:
+    import git
+except ImportError:
+    sys.exit("You need to install the GitPython requirement, e.g. sudo pip3.5 install GitPython")
 
 logger = logging.getLogger("GIT")
 logger.setLevel(logging.DEBUG)
