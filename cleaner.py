@@ -47,7 +47,10 @@ else:
 logger.debug("Using config:\n%s", json.dumps(config, sort_keys=True, indent=4))
 
 
-# file monitor events
+############################################################
+# FILESYSTEM MONITOR
+############################################################
+
 class FileEventHandler(PatternMatchingEventHandler):
     def on_created(self, event):
         super(FileEventHandler, self).on_created(event)
@@ -64,6 +67,47 @@ class FileEventHandler(PatternMatchingEventHandler):
             else:
                 logger.debug("File was ignored, does not exist at %r", cloud_path)
 
+
+upload_process = None
+
+
+def start(path):
+    global observer
+    # start folder monitor for file changes
+    if observer is None and os.path.exists(path):
+        # start hidden file monitor
+        event_handler = FileEventHandler()
+        observer = Observer()
+        observer.schedule(event_handler, path=path, recursive=True)
+        observer.start()
+        logger.info("Started file monitor for %r", path)
+
+        # start upload manager
+        if config['use_upload_manager']:
+            upload_process = Process(target=upload_manager)
+            upload_process.start()
+
+        # join and wait finish
+        observer.join()
+        if config['use_upload_manager']:
+            upload_process.join()
+        logger.debug("Finished monitoring and uploading")
+
+    else:
+        logger.debug("File monitor already started, or %r is not a valid path.", path)
+
+
+def stop():
+    global observer
+
+    if observer is not None:
+        observer.stop()
+        observer = None
+
+
+############################################################
+# UPLOAD MANAGER
+############################################################
 
 def upload_manager():
     try:
@@ -144,42 +188,9 @@ def upload_manager():
         logger.exception("Exception occurred: ")
 
 
-upload_process = None
-
-
-def start(path):
-    global observer
-    # start folder monitor for file changes
-    if observer is None and os.path.exists(path):
-        # start hidden file monitor
-        event_handler = FileEventHandler()
-        observer = Observer()
-        observer.schedule(event_handler, path=path, recursive=True)
-        observer.start()
-        logger.info("Started file monitor for %r", path)
-
-        # start upload manager
-        if config['use_upload_manager']:
-            upload_process = Process(target=upload_manager)
-            upload_process.start()
-
-        # join and wait finish
-        observer.join()
-        if config['use_upload_manager']:
-            upload_process.join()
-        logger.debug("Finished monitoring and uploading")
-
-    else:
-        logger.debug("File monitor already started, or %r is not a valid path.", path)
-
-
-def stop():
-    global observer
-
-    if observer is not None:
-        observer.stop()
-        observer = None
-
+############################################################
+# PROCESS STUFF
+############################################################
 
 def exit_gracefully(signum, frame):
     logger.debug("Shutting down gracefully process %r", os.getpid())

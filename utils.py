@@ -10,6 +10,10 @@ logger = logging.getLogger("UTILS")
 logger.setLevel(logging.DEBUG)
 
 
+############################################################
+# SCRIPT STUFF
+############################################################
+
 def get_num(x):
     return int(''.join(ele for ele in x if ele.isdigit() or ele == '.'))
 
@@ -125,6 +129,10 @@ def du_size_command(path, excludes):
     return size_cmd
 
 
+############################################################
+# CONFIG STUFF
+############################################################
+
 base_config = {
     'unionfs_folder': '/home/seed/media/local/.unionfs',  # .unionfs location inside unionfs read/write folder
     'remote_folder': 'google:',  # rclone remote
@@ -199,3 +207,7 @@ def build_config():
         fp.close()
         logger.debug("Created default config.json, please configure it before running me again.")
         exit(0)
+
+############################################################
+# UPDATER STUFF
+############################################################
