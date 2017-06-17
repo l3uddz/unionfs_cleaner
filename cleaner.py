@@ -182,7 +182,7 @@ def stop():
 
 
 def exit_gracefully(signum, frame):
-    logger.debug("Shutting down process %d", os.getpid())
+    logger.debug("Shutting down gracefully process %r", os.getpid())
     stop()
     if upload_process is not None:
         upload_process.stop()
