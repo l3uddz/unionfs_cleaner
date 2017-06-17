@@ -190,6 +190,12 @@ def exit_gracefully(signum, frame):
 
 
 if __name__ == "__main__":
+    if len(sys.argv):
+        for item in sys.argv:
+            if item == 'test':
+                utils.config_test(config)
+                exit(0)
+
     logger.debug("Current branch: %s", updater.active_branch())
     logger.debug("Current version: %s", updater.current_version())
     logger.debug("Latest version: %s", updater.latest_version())

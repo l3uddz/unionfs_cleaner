@@ -209,3 +209,24 @@ def build_config():
         fp.close()
         logger.debug("Created default config.json, please configure it before running me again.")
         exit(0)
+
+
+def config_test(config):
+    # test parse .unionfs folder
+    for path, subdirs, files in os.walk(config['unionfs_folder']):
+        for name in files:
+            file = os.path.join(path, name)
+            if file and file.endswith('_HIDDEN~'):
+                logger.debug("Hidden file detected: %r", file)
+                cloud_path = file.replace(config['unionfs_folder'], config['cloud_folder']).rstrip('_HIDDEN~')
+                remote_path = file.replace(config['unionfs_folder'], config['remote_folder']).rstrip('_HIDDEN~')
+                logger.debug('Check exists: %', cloud_path)
+                if os.path.exists(cloud_path):
+                    logger.debug('Exists! Delete with rclone delete "%s"', remote_path)
+
+    # show example rclone move that would have been used
+    upload_cmd = rclone_move_command(config['local_folder'], config['local_remote'],
+                                     config['rclone_transfers'], config['rclone_checkers'],
+                                     config['rclone_excludes'], config['dry_run'])
+    logger.debug("I would have ran the following rclone move command: %r", upload_cmd)
+    exit(0)
