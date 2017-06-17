@@ -2,6 +2,7 @@
 import json
 import logging
 import os
+import signal
 import time
 import timeit
 from logging.handlers import RotatingFileHandler
@@ -143,6 +144,9 @@ def upload_manager():
         logger.exception("Exception occurred: ")
 
 
+upload_process = None
+
+
 def start(path):
     global observer
     # start folder monitor for file changes
@@ -174,11 +178,17 @@ def stop():
 
     if observer is not None:
         observer.stop()
-        logger.info("Stopped file monitor")
         observer = None
-    else:
-        logger.debug("File monitor is not running...")
+
+
+def exit_gracefully(signum, frame):
+    logger.debug("Shutting down")
+    stop()
+    if upload_process is not None:
+        upload_process.stop()
+    exit(0)
 
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGINT, exit_gracefully)
     start(config['unionfs_folder'])
