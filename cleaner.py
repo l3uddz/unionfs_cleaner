@@ -191,4 +191,5 @@ def exit_gracefully(signum, frame):
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, exit_gracefully)
+    signal.signal(signal.SIGTERM, exit_gracefully)
     start(config['unionfs_folder'])
