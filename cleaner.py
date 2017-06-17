@@ -39,8 +39,6 @@ rootLogger.addHandler(fileHandler)
 logger = rootLogger.getChild("CLEANER")
 logger.setLevel(logging.DEBUG)
 
-observer = None
-
 # Config
 config = None
 if os.path.exists('config.json'):
@@ -73,13 +71,9 @@ class FileEventHandler(PatternMatchingEventHandler):
                 logger.debug("File was ignored, does not exist at %r", cloud_path)
 
 
-upload_process = None
-
-
 def start(path):
-    global observer
     # start folder monitor for file changes
-    if observer is None and os.path.exists(path):
+    if os.path.exists(path):
         # start hidden file monitor
         event_handler = FileEventHandler()
         observer = Observer()
@@ -88,26 +82,19 @@ def start(path):
         logger.info("Started file monitor for %r", path)
 
         # start upload manager
+        upload_process = None
         if config['use_upload_manager']:
             upload_process = Process(target=upload_manager)
             upload_process.start()
 
         # join and wait finish
         observer.join()
-        if config['use_upload_manager']:
+        if config['use_upload_manager'] and upload_process is not None:
             upload_process.join()
         logger.debug("Finished monitoring and uploading")
 
     else:
-        logger.debug("File monitor already started, or %r is not a valid path.", path)
-
-
-def stop():
-    global observer
-
-    if observer is not None:
-        observer.stop()
-        observer = None
+        logger.debug("Cannot start file monitor, %r is not a valid path.", path)
 
 
 ############################################################
@@ -198,11 +185,8 @@ def upload_manager():
 ############################################################
 
 def exit_gracefully(signum, frame):
-    logger.debug("Shutting down gracefully process %r", os.getpid())
-    stop()
-    if upload_process is not None:
-        upload_process.stop()
-    exit(0)
+    logger.debug("Shutting down process %r", os.getpid())
+    sys.exit(0)
 
 
 if __name__ == "__main__":
@@ -211,7 +195,7 @@ if __name__ == "__main__":
     logger.debug("Latest version: %s", updater.latest_version())
     if config['use_git_autoupdater'] and updater.update():
         logger.debug("Restarting...")
-        exit(1)
+        sys.exit(1)
 
     signal.signal(signal.SIGINT, exit_gracefully)
     signal.signal(signal.SIGTERM, exit_gracefully)

@@ -146,6 +146,7 @@ base_config = {
     ],
     'lsof_excludes': [
         # folders to be excluded from the lsof +D command, if path contains it, ignore it, e.g. "/downloads/"
+        ".partial~"
     ],
     'rclone_transfers': 8,  # number of transfers to use with rclone move (--transfers=8)
     'rclone_checkers': 16,  # number of checkers to use with rclone move (--checkers=16)
@@ -208,5 +209,3 @@ def build_config():
         fp.close()
         logger.debug("Created default config.json, please configure it before running me again.")
         exit(0)
-
-
