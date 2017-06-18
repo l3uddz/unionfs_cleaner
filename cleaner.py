@@ -71,32 +71,6 @@ class FileEventHandler(PatternMatchingEventHandler):
                 logger.debug("File was ignored, does not exist at %r", cloud_path)
 
 
-def start(path):
-    # start folder monitor for file changes
-    if os.path.exists(path):
-        # start hidden file monitor
-        event_handler = FileEventHandler()
-        observer = Observer()
-        observer.schedule(event_handler, path=path, recursive=True)
-        observer.start()
-        logger.info("Started file monitor for %r", path)
-
-        # start upload manager
-        upload_process = None
-        if config['use_upload_manager']:
-            upload_process = Process(target=upload_manager)
-            upload_process.start()
-
-        # join and wait finish
-        observer.join()
-        if config['use_upload_manager'] and upload_process is not None:
-            upload_process.join()
-        logger.debug("Finished monitoring and uploading")
-
-    else:
-        logger.debug("Cannot start file monitor, %r is not a valid path.", path)
-
-
 ############################################################
 # UPLOAD MANAGER
 ############################################################
@@ -143,7 +117,7 @@ def upload_manager():
                     start_time = timeit.default_timer()
                     utils.run_command(upload_cmd)
                     time_taken = timeit.default_timer() - start_time
-                    logger.debug("Moving finished in %d seconds", time_taken)
+                    logger.debug("Moving finished in %s", utils.seconds_to_string(time_taken))
 
                     # rclone rmdirs specified directories
                     if len(config['rclone_rmdirs']):
@@ -169,8 +143,8 @@ def upload_manager():
                     # send finish notification
                     if config['pushover_app_token'] and config['pushover_user_token']:
                         utils.send_pushover(config['pushover_app_token'], config['pushover_user_token'],
-                                            "Upload process finished in %d seconds. %d gigabytes left over." %
-                                            (time_taken, new_size))
+                                            "Upload process finished in %s. %d gigabytes left over." %
+                                            (utils.seconds_to_string(time_taken), new_size))
 
                 else:
                     logger.debug("Local folder is still under the max size by %d gigabytes",
@@ -181,8 +155,63 @@ def upload_manager():
 
 
 ############################################################
+# BACKUP MANAGER
+############################################################
+
+def backup_manager():
+    try:
+        logger.debug("Started backup manager for %r, %d source locations.", config['rsync_remote'],
+                     len(config['rsync_backups']))
+        while True:
+            time.sleep(60 * (60 * config['rsync_backup_interval']))
+            logger.debug("Starting backup process for %d source locations", len(config['rsync_backups']))
+            start_time = timeit.default_timer()
+            utils.backup(config)
+            time_taken = timeit.default_timer() - start_time
+            logger.debug("Backup process finished working, it took %s", utils.seconds_to_string(time_taken))
+
+    except Exception as ex:
+        logger.exception("Exception occurred: ")
+
+
+############################################################
 # PROCESS STUFF
 ############################################################
+
+def start(path):
+    # start folder monitor for file changes
+    if os.path.exists(path):
+        # start hidden file monitor
+        event_handler = FileEventHandler()
+        observer = Observer()
+        observer.schedule(event_handler, path=path, recursive=True)
+        observer.start()
+        logger.info("Started file monitor for %r", path)
+
+        # start upload manager
+        upload_process = None
+        if config['use_upload_manager']:
+            upload_process = Process(target=upload_manager)
+            upload_process.start()
+
+        # start backup manager
+        backup_process = None
+        if config['use_backup_manager'] and len(config['rsync_backups']):
+            backup_process = Process(target=backup_manager)
+            backup_process.start()
+
+        # join and wait finish
+        observer.join()
+        if config['use_upload_manager'] and upload_process is not None:
+            upload_process.join()
+        if config['use_backup_manager'] and backup_process is not None:
+            backup_process.join()
+
+        logger.debug("Finished monitoring and uploading")
+
+    else:
+        logger.debug("Cannot start file monitor, %r is not a valid path.", path)
+
 
 def exit_gracefully(signum, frame):
     logger.debug("Shutting down process %r", os.getpid())

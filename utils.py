@@ -14,6 +14,29 @@ logger.setLevel(logging.DEBUG)
 # SCRIPT STUFF
 ############################################################
 
+def seconds_to_string(seconds):
+    """ reference: https://codereview.stackexchange.com/a/120595 """
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    days, hours = divmod(hours, 24)
+    resp = ''
+    if days:
+        resp += '%d days' % days
+    if hours:
+        if len(resp):
+            resp += ', '
+        resp += '%d hours' % hours
+    if minutes:
+        if len(resp):
+            resp += ', '
+        resp += '%d minutes' % minutes
+    if seconds:
+        if len(resp):
+            resp += ' and '
+        resp += '%d seconds' % seconds
+    return resp
+
+
 def get_num(x):
     return int(''.join(ele for ele in x if ele.isdigit() or ele == '.'))
 
@@ -25,7 +48,7 @@ def run_command(command):
         if process.poll() is not None:
             break
         if output and len(output) > 6:
-            logger.info(str(output).lstrip('b').replace('\\n', ''))
+            logger.info(str(output).lstrip('b').replace('\\n', '').replace('\\r', ''))
 
     rc = process.poll()
     return rc
@@ -165,6 +188,13 @@ base_config = {
     ],
     'pushover_user_token': '',  # your pushover user token - upload notifications are sent here
     'pushover_app_token': '',  # your pushover user token - upload notifications are sent here
+    'rsync_backup_interval': 24,  # hours until an rsync operation is ran on your backup sources
+    'rsync_backups': {
+        # example rclone backup directory + excludes below
+        '/home/seed': ['Downloads*', 'torrents*', 'plex*', 'chunks*', 'tmp*']
+    },
+    'rsync_remote': '/home/seed/backup',  # rsync destination remote
+    'use_backup_manager': False,  # whether or not to start the backup manager upon script start
     'use_upload_manager': False,  # whether or not to start the upload manager upon script start
     'use_git_autoupdater': False,  # whether to automatically update (git pull) when theres a new commit on script start
     'dry_run': True,  # whether or not to use dry-run with rclone so no files are deleted/moved. use to verify working.
@@ -207,12 +237,15 @@ def build_config():
     with open('config.json', 'w') as fp:
         json.dump(base_config, fp, indent=4, sort_keys=True)
         fp.close()
-        logger.debug("Created default config.json, please configure it before running me again.")
+        logger.debug(
+            'Created default config.json, please configure it and run "./cleaner.py test" to check your config')
         exit(0)
 
 
 def config_test(config):
     # test parse .unionfs folder
+    logger.debug("Testing unionfs_folder, cloud_folder and remote_folder")
+    tested_hidden = False
     for path, subdirs, files in os.walk(config['unionfs_folder']):
         for name in files:
             file = os.path.join(path, name)
@@ -220,13 +253,50 @@ def config_test(config):
                 logger.debug("Hidden file detected: %r", file)
                 cloud_path = file.replace(config['unionfs_folder'], config['cloud_folder']).rstrip('_HIDDEN~')
                 remote_path = file.replace(config['unionfs_folder'], config['remote_folder']).rstrip('_HIDDEN~')
-                logger.debug('Check exists: %', cloud_path)
+                logger.debug('Check exists on cloud_folder: %r', cloud_path)
                 if os.path.exists(cloud_path):
-                    logger.debug('Exists! Delete with rclone delete "%s"', remote_path)
+                    tested_hidden = True
+                    logger.debug('Exists! I would have ran when this file was created:\nrclone delete %r', remote_path)
+    if not tested_hidden:
+        logger.debug("Did not find a _HIDDEN~ file on your cloud_folder, please upgrade a file then check me again!")
 
     # show example rclone move that would have been used
+    logger.debug("Testing local_folder, local_remote, rclone_transfers, rclone_checkers, rclone_excludes and dry_run")
     upload_cmd = rclone_move_command(config['local_folder'], config['local_remote'],
                                      config['rclone_transfers'], config['rclone_checkers'],
                                      config['rclone_excludes'], config['dry_run'])
-    logger.debug("I would have ran the following rclone move command: %r", upload_cmd)
+    logger.debug("Rclone move command, I would have ran:\n%r", upload_cmd)
+
+    # show example rsync backup that would be used
+    if len(config['rsync_backups']):
+        logger.debug("Testing rsync_backups and rsync_remote")
+        for source, excludes in config['rsync_backups'].items():
+            if source:
+                rsync_cmd = rsync_backup_command(source, config['rsync_remote'], excludes)
+                logger.debug("Rsync backup source %r. I would have ran:\n%r", source, rsync_cmd)
+
     exit(0)
+
+
+############################################################
+# RSYNC BACKUP STUFF
+############################################################
+
+def rsync_backup_command(source, destination, excludes):
+    backup_cmd = 'rsync -aAXvP'
+    for item in excludes:
+        backup_cmd += ' --exclude="%s"' % item
+    backup_cmd += ' "%s" "%s"' % (source, destination)
+    return backup_cmd
+
+
+def backup(config):
+    if not config['rsync_remote']:
+        return
+    for source, excludes in config['rsync_backups'].items():
+        logger.debug("Backing up %r excluding: %r", source, excludes)
+        cmd = rsync_backup_command(source, '/home/seed/backup', excludes)
+        if config['dry_run']:
+            cmd += ' --dry-run'
+        logger.debug("Using rsync command: %r", cmd)
+        run_command(cmd)
