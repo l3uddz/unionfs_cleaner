@@ -152,6 +152,18 @@ def du_size_command(path, excludes):
     return size_cmd
 
 
+def read_file_text(file):
+    data = ""
+    try:
+        with open(file, 'r') as fp:
+            data = fp.read()
+            fp.close()
+        return data
+    except Exception as ex:
+        logger.exception("Exception occurred reading %r:", file)
+        return ""
+
+
 ############################################################
 # CONFIG STUFF
 ############################################################
@@ -194,7 +206,9 @@ base_config = {
         '/home/seed': ['Downloads*', 'torrents*', 'plex*', 'chunks*', 'tmp*']
     },
     'rsync_remote': '/home/seed/backup',  # rsync destination remote
+    'config_check_interval': 1,  # interval in minutes between checking for config changes / restarting upon changes
     'use_backup_manager': False,  # whether or not to start the backup manager upon script start
+    'use_config_manager': False,  # whether or not to start the config manager, restart script on config change
     'use_upload_manager': False,  # whether or not to start the upload manager upon script start
     'use_git_autoupdater': False,  # whether to automatically update (git pull) when theres a new commit on script start
     'dry_run': True,  # whether or not to use dry-run with rclone so no files are deleted/moved. use to verify working.

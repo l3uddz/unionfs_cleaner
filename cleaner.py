@@ -175,8 +175,34 @@ def backup_manager():
 
 
 ############################################################
+# CONFIG MONITOR
+############################################################
+
+def config_monitor():
+    old_config = utils.read_file_text('config.json')
+    if len(old_config):
+        logger.debug("Started config monitor for config.json")
+    else:
+        logger.error("Could not read config.json file... not starting config monitor")
+        return
+
+    try:
+        while True:
+            time.sleep(60 * config['config_check_interval'])
+            tmp_config = utils.read_file_text('config.json')
+            if tmp_config != old_config:
+                logger.debug("Configuration has changed, restarting process to reload...")
+                os.kill(os.getppid(), signal.SIGHUP)
+
+    except Exception as ex:
+        logger.exception("Exception occurred: ")
+
+
+############################################################
 # PROCESS STUFF
 ############################################################
+processes = []
+
 
 def start(path):
     # start folder monitor for file changes
@@ -193,12 +219,21 @@ def start(path):
         if config['use_upload_manager']:
             upload_process = Process(target=upload_manager)
             upload_process.start()
+            processes.append(upload_process.pid)
 
         # start backup manager
         backup_process = None
         if config['use_backup_manager'] and len(config['rsync_backups']):
             backup_process = Process(target=backup_manager)
             backup_process.start()
+            processes.append(backup_process.pid)
+
+        # start config manager
+        config_process = None
+        if config['use_config_manager']:
+            config_process = Process(target=config_monitor)
+            config_process.start()
+            processes.append(config_process.pid)
 
         # join and wait finish
         observer.join()
@@ -206,8 +241,10 @@ def start(path):
             upload_process.join()
         if config['use_backup_manager'] and backup_process is not None:
             backup_process.join()
+        if config['use_config_manager'] and config_process is not None:
+            config_process.join()
 
-        logger.debug("Finished monitoring and uploading")
+        logger.debug("Finished!")
 
     else:
         logger.debug("Cannot start file monitor, %r is not a valid path.", path)
@@ -215,6 +252,14 @@ def start(path):
 
 def exit_gracefully(signum, frame):
     logger.debug("Shutting down process %r", os.getpid())
+    sys.exit(0)
+
+
+def exit_restart(signum, frame):
+    for pid in processes:
+        if pid == os.getpid():
+            continue
+        os.kill(pid, signal.SIGTERM)
     sys.exit(0)
 
 
@@ -234,4 +279,5 @@ if __name__ == "__main__":
 
     signal.signal(signal.SIGINT, exit_gracefully)
     signal.signal(signal.SIGTERM, exit_gracefully)
+    signal.signal(signal.SIGHUP, exit_restart)
     start(config['unionfs_folder'])
