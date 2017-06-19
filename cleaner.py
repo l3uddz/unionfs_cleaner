@@ -10,7 +10,7 @@ from logging.handlers import RotatingFileHandler
 from multiprocessing import Process
 
 try:
-    from watchdog.events import PatternMatchingEventHandler
+    from watchdog.events import FileSystemEventHandler
     from watchdog.observers import Observer
 except ImportError:
     sys.exit("You need to install the watchdog requirement, e.g. sudo pip3.5 install watchdog")
@@ -54,9 +54,8 @@ logger.debug("Using config:\n%s", json.dumps(config, sort_keys=True, indent=4))
 # FILESYSTEM MONITOR
 ############################################################
 
-class FileEventHandler(PatternMatchingEventHandler):
+class HiddenFileEventHandler(FileSystemEventHandler):
     def on_created(self, event):
-        super(FileEventHandler, self).on_created(event)
         if event.src_path.endswith('_HIDDEN~'):
             logger.info("File %r was created" % event.src_path)
             cloud_path = event.src_path.replace(config['unionfs_folder'], config['cloud_folder']).rstrip('_HIDDEN~')
@@ -177,22 +176,27 @@ def backup_manager():
 ############################################################
 # CONFIG MONITOR
 ############################################################
+class ConfigFileEventHandler(FileSystemEventHandler):
+    def on_modified(self, event):
+        if event.src_path and event.src_path.endswith('config.json'):
+            logger.debug("config.json was modified, restarting in 3 seconds...")
+            time.sleep(3)
+            os.kill(os.getppid(), signal.SIGHUP)
+
 
 def config_monitor():
     old_config = utils.read_file_text('config.json')
-    if len(old_config):
-        logger.debug("Started config monitor for config.json")
-    else:
+    if not len(old_config):
         logger.error("Could not read config.json file... not starting config monitor")
         return
 
     try:
-        while True:
-            time.sleep(60 * config['config_check_interval'])
-            tmp_config = utils.read_file_text('config.json')
-            if tmp_config != old_config:
-                logger.debug("Configuration has changed, restarting process to reload...")
-                os.kill(os.getppid(), signal.SIGHUP)
+        config_observer = Observer()
+        config_observer.schedule(ConfigFileEventHandler(), path='.', recursive=False)
+        config_observer.start()
+        logger.debug("Started config monitor for config.json")
+        config_observer.join()
+        logger.debug("Config monitor finished")
 
     except Exception as ex:
         logger.exception("Exception occurred: ")
@@ -208,7 +212,7 @@ def start(path):
     # start folder monitor for file changes
     if os.path.exists(path):
         # start hidden file monitor
-        event_handler = FileEventHandler()
+        event_handler = HiddenFileEventHandler()
         observer = Observer()
         observer.schedule(event_handler, path=path, recursive=True)
         observer.start()

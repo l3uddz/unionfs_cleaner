@@ -206,7 +206,6 @@ base_config = {
         '/home/seed': ['Downloads*', 'torrents*', 'plex*', 'chunks*', 'tmp*']
     },
     'rsync_remote': '/home/seed/backup',  # rsync destination remote
-    'config_check_interval': 1,  # interval in minutes between checking for config changes / restarting upon changes
     'use_backup_manager': False,  # whether or not to start the backup manager upon script start
     'use_config_manager': False,  # whether or not to start the config manager, restart script on config change
     'use_upload_manager': False,  # whether or not to start the upload manager upon script start
