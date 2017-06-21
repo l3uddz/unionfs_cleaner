@@ -63,8 +63,8 @@ class HiddenFileEventHandler(FileSystemEventHandler):
             if os.path.exists(cloud_path):
                 logger.debug("Removing %r" % remote_path)
                 if utils.rclone_delete(remote_path, config['dry_run']):
-                    logger.debug("Deleted %r", remote_path)
                     os.remove(event.src_path)
+                    logger.debug("Deleted %r", remote_path)
                 else:
                     logger.debug("Failed to delete %r", remote_path)
             else:
