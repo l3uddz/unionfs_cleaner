@@ -169,10 +169,10 @@ def read_file_text(file):
 ############################################################
 
 base_config = {
-    'unionfs_folder': '/home/seed/media/local/.unionfs',  # .unionfs location inside unionfs read/write folder
+    'unionfs_folder': '/mnt/local/.unionfs-fuse',  # .unionfs location inside unionfs read/write folder
     'remote_folder': 'google:',  # rclone remote
-    'cloud_folder': '/home/seed/media/gcd',  # mount location of read/write folder
-    'local_folder': '/home/seed/media/local/Media',  # local folder to upload
+    'cloud_folder': '/mnt/plexdrive',  # mount location of read/write folder
+    'local_folder': '/mnt/local/Media',  # local folder to upload when size reaches local_folder_size
     'local_remote': 'google:/Media',  # remote folder location of local_folder
     'local_folder_size': 250,  # max size of local_folder in gigabytes before moving content
     'local_folder_check_interval': 60,  # minutes to check size of local_folder
@@ -188,8 +188,8 @@ base_config = {
     'rclone_rmdirs': [
         # folders to clear with rclone rmdirs after upload
         # remember this folder can be removed too, so always go one step deeper than local_folder
-        '/home/seed/media/local/Media/Movies',
-        '/home/seed/media/local/Media/TV'
+        '/mnt/local/Media/Movies',
+        '/mnt/local/Media/TV'
     ],
     'rclone_excludes': [
         # exclusions for the rclone move "local_folder" "local_remote"
@@ -198,12 +198,12 @@ base_config = {
         '.unionfs/**',
         '.unionfs-fuse/**',
     ],
-    'pushover_user_token': '',  # your pushover user token - upload notifications are sent here
-    'pushover_app_token': '',  # your pushover user token - upload notifications are sent here
+    'pushover_user_token': '',  # your pushover user token - upload/backup notifications are sent here
+    'pushover_app_token': '',  # your pushover user token - upload/backup notifications are sent here
     'rsync_backup_interval': 24,  # hours until an rsync operation is ran on your backup sources
     'rsync_backups': {
         # example rclone backup directory + excludes below
-        '/home/seed': ['Downloads*', 'torrents*', 'plex*', 'chunks*', 'tmp*']
+        '/home/seed': ['Downloads*', 'torrents*', 'plex*', 'chunks*', 'tmp*', 'backup*']
     },
     'rsync_remote': '/home/seed/backup',  # rsync destination remote
     'use_backup_manager': False,  # whether or not to start the backup manager upon script start
@@ -274,6 +274,8 @@ def config_test(config):
         logger.debug("Did not find a _HIDDEN~ file on your cloud_folder, please upgrade a file then check me again!")
 
     # show example rclone move that would have been used
+    size = folder_size(config['local_folder'], config['du_excludes'])
+    logger.debug("Local folder size is %d gigabytes", size)
     logger.debug("Testing local_folder, local_remote, rclone_transfers, rclone_checkers, rclone_excludes and dry_run")
     upload_cmd = rclone_move_command(config['local_folder'], config['local_remote'],
                                      config['rclone_transfers'], config['rclone_checkers'],

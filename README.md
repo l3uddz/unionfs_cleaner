@@ -176,3 +176,7 @@ use_git_autoupdater is used on script start. if enabled, and there is a new git 
 use_config_manager is used to determine whehter or not to start the config manager. all this does is monitor your config file for changes, if they are detected, the script will restart itself.
 
 dry_run is used to enable dry-run on the rclone move and rsync commands. I highly recommend keeping this flag true the first time you setup your config, this way you are at no risk of loosing data while still being able to verify your config is correct.
+
+
+
+You can run cleaner.py passing the test flag which will perform some very basic checks / tests on your config and show output. e.g. python3.5 cleaner.py test
