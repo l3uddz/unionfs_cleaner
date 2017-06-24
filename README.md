@@ -19,11 +19,12 @@ Perform automated rsync backups on specified folders after X hours.
 ## unionfs_cleaner
 
 1. `cd /opt`
-2. `sudo git clone https://github.com/l3uddz/unionfs_cleaner`
-3. `sudo chown -R user:user unionfs_cleaner`
-4. `cd unionfs_cleaner`
-5. `sudo pip3.5 install -r requirements.txt`
-6. `python3.5 cleaner.py`
+2. `sudo apt-get install lsof`
+3. `sudo git clone https://github.com/l3uddz/unionfs_cleaner`
+4. `sudo chown -R user:user unionfs_cleaner`
+5. `cd unionfs_cleaner`
+6. `sudo pip3.5 install -r requirements.txt`
+7. `python3.5 cleaner.py`
 
 You should now have unionfs_cleaner installed, and by running it for the first time, it will generate a default config.json configuration and exit for you to adjust your config.
 
