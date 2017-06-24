@@ -164,11 +164,22 @@ def backup_manager():
                      len(config['rsync_backups']))
         while True:
             time.sleep(60 * (60 * config['rsync_backup_interval']))
+
+            # send start notification
+            if config['pushover_app_token'] and config['pushover_user_token']:
+                utils.send_pushover(config['pushover_app_token'], config['pushover_user_token'],
+                                    "Backup process started for %d source locations." % len(config['rsync_backups']))
+
             logger.debug("Starting backup process for %d source locations", len(config['rsync_backups']))
             start_time = timeit.default_timer()
             utils.backup(config)
             time_taken = timeit.default_timer() - start_time
             logger.debug("Backup process finished working, it took %s", utils.seconds_to_string(time_taken))
+
+            # send finish notification
+            if config['pushover_app_token'] and config['pushover_user_token']:
+                utils.send_pushover(config['pushover_app_token'], config['pushover_user_token'],
+                                    "Backup process finished in %s." % utils.seconds_to_string(time_taken))
 
     except Exception as ex:
         logger.exception("Exception occurred: ")

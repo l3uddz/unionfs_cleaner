@@ -167,7 +167,7 @@ It would perform this for each entry inside the rsync_backups list, adjusting th
 
 The other config options are below:
 
-pushover_app_token is used to send notifications on start/stop of the uploader
+pushover_app_token is used to send notifications on start/stop of the uploader & backup manager
 
 pushover_user_token same as above. Both of these entries must be filled for push notifications, leave empty to disable notifications.
 
@@ -175,4 +175,4 @@ use_git_autoupdater is used on script start. if enabled, and there is a new git 
 
 use_config_manager is used to determine whehter or not to start the config manager. all this does is monitor your config file for changes, if they are detected, the script will restart itself.
 
-
+dry_run is used to enable dry-run on the rclone move and rsync commands. I highly recommend keeping this flag true the first time you setup your config, this way you are at no risk of loosing data while still being able to verify your config is correct.
