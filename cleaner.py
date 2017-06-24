@@ -80,7 +80,7 @@ def hidden_manager():
                             else:
                                 logger.debug("Failed to delete %r", remote_path)
                         else:
-                            logger.debug("%r does not exist, removing %r", cloud_path, file)
+                            logger.debug("File does not exist on remote, removing %r", file)
                             if not config['dry_run']:
                                 os.remove(file)
             logger.debug("Found %d hidden files, deleted %d files off remote", hidden, deleted)
