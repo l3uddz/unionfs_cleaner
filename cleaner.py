@@ -51,24 +51,42 @@ logger.debug("Using config:\n%s", json.dumps(config, sort_keys=True, indent=4))
 
 
 ############################################################
-# FILESYSTEM MONITOR
+# HIDDEN MANAGER
 ############################################################
 
-class HiddenFileEventHandler(FileSystemEventHandler):
-    def on_created(self, event):
-        if event.src_path.endswith('_HIDDEN~'):
-            logger.info("File %r was created" % event.src_path)
-            cloud_path = event.src_path.replace(config['unionfs_folder'], config['cloud_folder']).rstrip('_HIDDEN~')
-            remote_path = event.src_path.replace(config['unionfs_folder'], config['remote_folder']).rstrip('_HIDDEN~')
-            if os.path.exists(cloud_path):
-                logger.debug("Removing %r" % remote_path)
-                if utils.rclone_delete(remote_path, config['dry_run']):
-                    os.remove(event.src_path)
-                    logger.debug("Deleted %r", remote_path)
-                else:
-                    logger.debug("Failed to delete %r", remote_path)
-            else:
-                logger.debug("File was ignored, does not exist at %r", cloud_path)
+def hidden_manager():
+    try:
+        logger.debug("Started hidden manager for %r", config['unionfs_folder'])
+        while True:
+            time.sleep(60)
+            hidden = 0
+            deleted = 0
+            logger.debug("Checking %r", config['unionfs_folder'])
+            for path, subdirs, files in os.walk(config['unionfs_folder']):
+                for name in files:
+                    file = os.path.join(path, name)
+                    if file and file.endswith('_HIDDEN~'):
+                        hidden += 1
+                        logger.debug("Hidden file found: %r", file)
+                        cloud_path = file.replace(config['unionfs_folder'], config['cloud_folder']).rstrip('_HIDDEN~')
+                        remote_path = file.replace(config['unionfs_folder'], config['remote_folder']).rstrip('_HIDDEN~')
+                        if os.path.exists(cloud_path):
+                            logger.debug("Removing %r", remote_path)
+                            if utils.rclone_delete(remote_path, config['dry_run']):
+                                if not config['dry_run']:
+                                    os.remove(file)
+                                logger.debug("Deleted %r", remote_path)
+                                deleted += 1
+                            else:
+                                logger.debug("Failed to delete %r", remote_path)
+                        else:
+                            logger.debug("%r does not exist, removing %r", cloud_path, file)
+                            if not config['dry_run']:
+                                os.remove(file)
+            logger.debug("Found %d hidden files, deleted %d files off remote", hidden, deleted)
+
+    except Exception as ex:
+        logger.exception("Exception occurred: ")
 
 
 ############################################################
@@ -224,11 +242,9 @@ def start(path):
     # start folder monitor for file changes
     if os.path.exists(path):
         # start hidden file monitor
-        event_handler = HiddenFileEventHandler()
-        observer = Observer()
-        observer.schedule(event_handler, path=path, recursive=True)
-        observer.start()
-        logger.info("Started file monitor for %r", path)
+        hidden_process = Process(target=hidden_manager)
+        hidden_process.start()
+        processes.append(hidden_process.pid)
 
         # start upload manager
         upload_process = None
@@ -252,7 +268,7 @@ def start(path):
             processes.append(config_process.pid)
 
         # join and wait finish
-        observer.join()
+        hidden_process.join()
         if config['use_upload_manager'] and upload_process is not None:
             upload_process.join()
         if config['use_backup_manager'] and backup_process is not None:
