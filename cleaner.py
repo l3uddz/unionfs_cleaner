@@ -9,12 +9,6 @@ import timeit
 from logging.handlers import RotatingFileHandler
 from multiprocessing import Process
 
-try:
-    from watchdog.events import FileSystemEventHandler
-    from watchdog.observers import Observer
-except ImportError:
-    sys.exit("You need to install the watchdog requirement, e.g. sudo pip3.5 install watchdog")
-
 import updater
 import utils
 
@@ -58,7 +52,7 @@ def hidden_manager():
     try:
         logger.debug("Started hidden manager for %r", config['unionfs_folder'])
         while True:
-            time.sleep(60)
+            time.sleep(60 * 10)
             hidden = 0
             deleted = 0
             logger.debug("Checking %r", config['unionfs_folder'])
@@ -73,10 +67,10 @@ def hidden_manager():
                         if os.path.exists(cloud_path):
                             logger.debug("Removing %r", remote_path)
                             if utils.rclone_delete(remote_path, config['dry_run']):
+                                deleted += 1
                                 if not config['dry_run']:
                                     os.remove(file)
                                 logger.debug("Deleted %r", remote_path)
-                                deleted += 1
                             else:
                                 logger.debug("Failed to delete %r", remote_path)
                         else:
@@ -206,13 +200,6 @@ def backup_manager():
 ############################################################
 # CONFIG MONITOR
 ############################################################
-class ConfigFileEventHandler(FileSystemEventHandler):
-    def on_modified(self, event):
-        if event.src_path and event.src_path.endswith('config.json'):
-            logger.debug("config.json was modified, restarting in 3 seconds...")
-            time.sleep(3)
-            os.kill(os.getppid(), signal.SIGHUP)
-
 
 def config_monitor():
     old_config = utils.read_file_text('config.json')
@@ -221,12 +208,14 @@ def config_monitor():
         return
 
     try:
-        config_observer = Observer()
-        config_observer.schedule(ConfigFileEventHandler(), path='.', recursive=False)
-        config_observer.start()
+        mod_time = os.path.getmtime('config.json')
         logger.debug("Started config monitor for config.json")
-        config_observer.join()
-        logger.debug("Config monitor finished")
+        while True:
+            time.sleep(60)
+            if os.path.getmtime('config.json') != mod_time:
+                logger.debug("config.json was modified, restarting in 3 seconds...")
+                time.sleep(3)
+                os.kill(os.getppid(), signal.SIGHUP)
 
     except Exception as ex:
         logger.exception("Exception occurred: ")

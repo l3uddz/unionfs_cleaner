@@ -1,2 +1,1 @@
-watchdog==0.8.3
 GitPython==2.1.5
