@@ -1,5 +1,5 @@
 # unionfs_cleaner
-Monitor for .HIDDEN file creations, upon detection, check if the hidden file exists on your mount, if it does, run an rclone delete "path" to remove from your cloud drive.
+Perform scan of .unionfs folder for _HIDDEN~ files, if file exists on remote, delete it and the _HIDDEN~ file.
 Perform automated rclone moves on your local media when X gigabytes has been reached and no files are currently being accessed.
 Perform automated rsync backups on specified folders after X hours.
 
@@ -71,6 +71,7 @@ Example configuration:
     },
     "rsync_remote": "/home/seed/backup",
     "unionfs_folder": "/mnt/local/.unionfs-fuse",
+	"unionfs_folder_check_interval": 60,
     "use_backup_manager": false,
     "use_config_manager": true,
     "use_git_autoupdater": true,
@@ -79,17 +80,20 @@ Example configuration:
 ```
 ## _HIDDEN~ cleaner
 
-This feature is the core functionality of unionfs_cleaner, it cannot be disabled as it was designed for this purpose initially. When unionfs wants to delete a file that is on the read-only mount, it obviously cannot do this because it has no access. So what it does is it will create a _HIDDEN~ file inside your read-write mount in either .unionfs or .unionfs-fuse, this tells unionfs to hide that file from the merged folder. This typically happens when sonarr/radarr upgrades a file. We want these to be removed from the cloud as this file is created so we dont have duplicates when we next perform an upload. Below are the key variables to be interested in when setting this up.
+This feature is the core functionality of unionfs_cleaner, it cannot be disabled as it was designed for this purpose initially. When unionfs wants to delete a file that is on the read-only mount, it obviously cannot do this because it has no access. So what it does is it will create a _HIDDEN~ file inside your read-write mount in either .unionfs or .unionfs-fuse, this tells unionfs to hide that file from the merged folder. This typically happens when sonarr/radarr upgrades a file. We want these to be removed from the cloud so we dont have duplicates when we next perform an upload. Below are the key variables to be interested in when setting this up.
 
 1. unionfs_folder (example: `/mnt/local/.unionfs-fuse`)
 2. remote_folder (example: `google:`)
 3. cloud_folder (example: `/mnt/plexdrive`)
+4. unionfs_folder_check_interval (example: `60`)
 
 unionfs_folder is the .unionfs/.unionfs-fuse folder that is created inside your read/write folder.
 
 cloud_folder is your read only folder used in your unionfs mount.
 
 remote_folder is your rclone remote.
+
+unionfs_folder_check_interval is how often in minutes to scan the unionfs_folder for HIDDEN~ files/remove the offending files from remote.
 
 Keeping this in mind, lets look at the example below:
 
@@ -99,6 +103,8 @@ Keeping this in mind, lets look at the example below:
 
 What's happened here, is cleaner.py has seen that a new _HIDDEN~ file was created in your unionfs_folder. So it will strip the _HIDDEN~ from the path, and replace unionfs_folder with remote_folder. The output is used as the rclone delete path as seen above.
 The cloud_folder does exactly the same, with the exception that instead of performing a delete, it will check if the file exists, before performing the rclone delete. This is used to ensure that the file exists before doing the rclone delete.
+
+Note: Now using a directory scan method instead of detecting file creations, this seems more reliable. Left above text for illustration purposes of how the settings correlate to paths.
 
 ## Uploader
 
@@ -174,7 +180,7 @@ pushover_user_token same as above. Both of these entries must be filled for push
 
 use_git_autoupdater is used on script start. if enabled, and there is a new git commit, it will update itself then restart.
 
-use_config_manager is used to determine whehter or not to start the config manager. all this does is monitor your config file for changes, if they are detected, the script will restart itself.
+use_config_manager is used to determine whehter or not to start the config manager. all this does is monitor your config file for changes, if they are detected, the script will restart itself. this check happens once per minute (file modified time).
 
 dry_run is used to enable dry-run on the rclone move and rsync commands. I highly recommend keeping this flag true the first time you setup your config, this way you are at no risk of loosing data while still being able to verify your config is correct.
 
