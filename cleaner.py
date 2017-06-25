@@ -77,7 +77,7 @@ def hidden_manager():
                             logger.debug("File does not exist on remote, removing %r", file)
                             if not config['dry_run']:
                                 os.remove(file)
-            logger.debug("Found %d hidden files, deleted %d files off remote", hidden, deleted)
+            logger.debug("Found %d hidden file(s), deleted %d file(s) off remote", hidden, deleted)
 
     except Exception as ex:
         logger.exception("Exception occurred: ")
