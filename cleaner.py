@@ -52,7 +52,7 @@ def hidden_manager():
     try:
         logger.debug("Started hidden manager for %r", config['unionfs_folder'])
         while True:
-            time.sleep(60 * 10)
+            time.sleep(60 * config['unionfs_folder_check_interval'])
             hidden = 0
             deleted = 0
             logger.debug("Checking %r", config['unionfs_folder'])
