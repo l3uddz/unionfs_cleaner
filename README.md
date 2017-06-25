@@ -71,7 +71,7 @@ Example configuration:
     },
     "rsync_remote": "/home/seed/backup",
     "unionfs_folder": "/mnt/local/.unionfs-fuse",
-	"unionfs_folder_check_interval": 60,
+    "unionfs_folder_check_interval": 60,
     "use_backup_manager": false,
     "use_config_manager": true,
     "use_git_autoupdater": true,
@@ -104,7 +104,7 @@ Keeping this in mind, lets look at the example below:
 What's happened here, is cleaner.py has seen that a new _HIDDEN~ file was created in your unionfs_folder. So it will strip the _HIDDEN~ from the path, and replace unionfs_folder with remote_folder. The output is used as the rclone delete path as seen above.
 The cloud_folder does exactly the same, with the exception that instead of performing a delete, it will check if the file exists, before performing the rclone delete. This is used to ensure that the file exists before doing the rclone delete.
 
-Note: Now using a directory scan method instead of detecting file creations, this seems more reliable. Left above text for illustration purposes of how the settings correlate to paths.
+**Note: Now using a directory scan method instead of detecting file creations, this seems more reliable. Left above text for illustration purposes of how the settings correlate to paths.**
 
 ## Uploader
 
