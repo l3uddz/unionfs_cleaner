@@ -48,36 +48,40 @@ logger.debug("Using config:\n%s", json.dumps(config, sort_keys=True, indent=4))
 # HIDDEN MANAGER
 ############################################################
 
+def remove_hidden():
+    hidden = 0
+    deleted = 0
+    logger.debug("Checking %r", config['unionfs_folder'])
+    for path, subdirs, files in os.walk(config['unionfs_folder']):
+        for name in files:
+            file = os.path.join(path, name)
+            if file and file.endswith('_HIDDEN~'):
+                hidden += 1
+                logger.debug("Hidden file found: %r", file)
+                cloud_path = file.replace(config['unionfs_folder'], config['cloud_folder']).rstrip('_HIDDEN~')
+                remote_path = file.replace(config['unionfs_folder'], config['remote_folder']).rstrip('_HIDDEN~')
+                if os.path.exists(cloud_path):
+                    logger.debug("Removing %r", remote_path)
+                    if utils.rclone_delete(remote_path, config['dry_run']):
+                        deleted += 1
+                        if not config['dry_run']:
+                            os.remove(file)
+                        logger.debug("Deleted %r", remote_path)
+                    else:
+                        logger.debug("Failed to delete %r", remote_path)
+                else:
+                    logger.debug("File does not exist on remote, removing %r", file)
+                    if not config['dry_run']:
+                        os.remove(file)
+    logger.debug("Found %d hidden file(s), deleted %d file(s) off remote", hidden, deleted)
+
+
 def hidden_manager():
     try:
         logger.debug("Started hidden manager for %r", config['unionfs_folder'])
         while True:
             time.sleep(60 * config['unionfs_folder_check_interval'])
-            hidden = 0
-            deleted = 0
-            logger.debug("Checking %r", config['unionfs_folder'])
-            for path, subdirs, files in os.walk(config['unionfs_folder']):
-                for name in files:
-                    file = os.path.join(path, name)
-                    if file and file.endswith('_HIDDEN~'):
-                        hidden += 1
-                        logger.debug("Hidden file found: %r", file)
-                        cloud_path = file.replace(config['unionfs_folder'], config['cloud_folder']).rstrip('_HIDDEN~')
-                        remote_path = file.replace(config['unionfs_folder'], config['remote_folder']).rstrip('_HIDDEN~')
-                        if os.path.exists(cloud_path):
-                            logger.debug("Removing %r", remote_path)
-                            if utils.rclone_delete(remote_path, config['dry_run']):
-                                deleted += 1
-                                if not config['dry_run']:
-                                    os.remove(file)
-                                logger.debug("Deleted %r", remote_path)
-                            else:
-                                logger.debug("Failed to delete %r", remote_path)
-                        else:
-                            logger.debug("File does not exist on remote, removing %r", file)
-                            if not config['dry_run']:
-                                os.remove(file)
-            logger.debug("Found %d hidden file(s), deleted %d file(s) off remote", hidden, deleted)
+            remove_hidden()
 
     except Exception as ex:
         logger.exception("Exception occurred: ")
@@ -113,6 +117,11 @@ def upload_manager():
                                                 "%d file(s) are currently being accessed." %
                                                 (size, len(opened_files)))
                         continue
+
+                    # remove hidden before upload
+                    # (we don't want to delete a hidden from remote, after already replacing it)
+                    logger.debug("Purging _HIDDEN~ before upload commences")
+                    remove_hidden()
 
                     # send start notification
                     if config['pushover_app_token'] and config['pushover_user_token']:
