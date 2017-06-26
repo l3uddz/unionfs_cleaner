@@ -48,7 +48,7 @@ def run_command(command):
         if process.poll() is not None:
             break
         if output and len(output) > 6:
-            logger.info(str(output).lstrip('b').replace('\\n', '').replace('\\r', ''))
+            logger.info(str(output).strip())
 
     rc = process.poll()
     return rc
