@@ -44,11 +44,11 @@ def get_num(x):
 def run_command(command):
     process = subprocess.Popen(shlex.split(command), shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     while True:
-        output = str(process.stdout.readline())
+        output = str(process.stdout.readline()).lstrip('b').replace('\\n')
         if process.poll() is not None:
             break
         if output and len(output) > 6:
-            logger.info(str(output).strip())
+            logger.info(output)
 
     rc = process.poll()
     return rc
