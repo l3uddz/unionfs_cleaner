@@ -64,10 +64,10 @@ def remove_hidden():
                     logger.debug("Removing %r", remote_path)
                     if utils.rclone_delete(remote_path, config['dry_run']):
                         deleted += 1
+                        logger.debug("Deleted %r", remote_path)
                         if not config['dry_run']:
                             try:
                                 os.remove(file)
-                                logger.debug("Deleted %r", remote_path)
                             except Exception as ex:
                                 logger.exception("Exception removing _HIDDEN~ file %s: ", file)
                     else:
