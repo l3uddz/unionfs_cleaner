@@ -45,7 +45,7 @@ logger.debug("Using config:\n%s", json.dumps(config, sort_keys=True, indent=4))
 
 
 ############################################################
-# HIDDEN MANAGER
+# HIDDEN REMOVER
 ############################################################
 
 def remove_hidden():
@@ -67,27 +67,17 @@ def remove_hidden():
                         if not config['dry_run']:
                             try:
                                 os.remove(file)
+                                logger.debug("Deleted %r", remote_path)
                             except Exception as ex:
                                 logger.exception("Exception removing _HIDDEN~ file %s: ", file)
-                        logger.debug("Deleted %r", remote_path)
                     else:
                         logger.debug("Failed to delete %r", remote_path)
                 else:
                     logger.debug("File does not exist on remote, removing %r", file)
                     if not config['dry_run']:
                         os.remove(file)
+
     logger.debug("Found %d hidden file(s), deleted %d file(s) off remote", hidden, deleted)
-
-
-def hidden_manager():
-    try:
-        logger.debug("Started hidden manager for %r", config['unionfs_folder'])
-        while True:
-            time.sleep(60 * config['unionfs_folder_check_interval'])
-            remove_hidden()
-
-    except Exception as ex:
-        logger.exception("Exception occurred: ")
 
 
 ############################################################
@@ -242,11 +232,6 @@ processes = []
 def start(path):
     # start folder monitor for file changes
     if os.path.exists(path):
-        # start hidden file monitor
-        hidden_process = Process(target=hidden_manager)
-        hidden_process.start()
-        processes.append(hidden_process.pid)
-
         # start upload manager
         upload_process = None
         if config['use_upload_manager']:
@@ -269,7 +254,6 @@ def start(path):
             processes.append(config_process.pid)
 
         # join and wait finish
-        hidden_process.join()
         if config['use_upload_manager'] and upload_process is not None:
             upload_process.join()
         if config['use_backup_manager'] and backup_process is not None:

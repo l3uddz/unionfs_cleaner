@@ -170,7 +170,6 @@ def read_file_text(file):
 
 base_config = {
     'unionfs_folder': '/mnt/local/.unionfs-fuse',  # .unionfs location inside unionfs read/write folder
-    'unionfs_folder_check_interval': 60,  # minutes to check unionfs_folder for _HIDDEN~ files
     'remote_folder': 'google:',  # rclone remote
     'cloud_folder': '/mnt/plexdrive',  # mount location of read/write folder
     'local_folder': '/mnt/local/Media',  # local folder to upload when size reaches local_folder_size

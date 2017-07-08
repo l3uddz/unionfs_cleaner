@@ -71,7 +71,6 @@ Example configuration:
     },
     "rsync_remote": "/home/seed/backup",
     "unionfs_folder": "/mnt/local/.unionfs-fuse",
-    "unionfs_folder_check_interval": 60,
     "use_backup_manager": false,
     "use_config_manager": true,
     "use_git_autoupdater": true,
@@ -85,15 +84,12 @@ This feature is the core functionality of unionfs_cleaner, it cannot be disabled
 1. unionfs_folder (example: `/mnt/local/.unionfs-fuse`)
 2. remote_folder (example: `google:`)
 3. cloud_folder (example: `/mnt/plexdrive`)
-4. unionfs_folder_check_interval (example: `60`)
 
 unionfs_folder is the .unionfs/.unionfs-fuse folder that is created inside your read/write folder.
 
 cloud_folder is your read only folder used in your unionfs mount.
 
 remote_folder is your rclone remote.
-
-unionfs_folder_check_interval is how often in minutes to scan the unionfs_folder for HIDDEN~ files/remove the offending files from remote.
 
 Keeping this in mind, lets look at the example below:
 
