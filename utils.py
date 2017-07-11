@@ -294,8 +294,8 @@ def config_test(config):
     if len(config['rclone_rmdirs']):
         for dir in config['rclone_rmdirs']:
             if os.path.exists(dir):
-                rmdircmd = 'rclone rmdirs "%s"' % dir
-                logger.debug("Rclone rmdir command, I would have ran:\n%r", rmdircmd)
+                rmdircmd = 'find "%s"* -type d -empty -delete' % dir
+                logger.debug("find -type d -empty -delete command, I would have ran:\n%r", rmdircmd)
 
     exit(0)
 
