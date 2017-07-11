@@ -289,6 +289,13 @@ def config_test(config):
             if source:
                 rsync_cmd = rsync_backup_command(source, config['rsync_remote'], excludes)
                 logger.debug("Rsync backup source %r. I would have ran:\n%r", source, rsync_cmd)
+                
+    # show example rclome rmdir hat would be used
+    if len(config['rclone_rmdirs']):
+        for dir in config['rclone_rmdirs']:
+            if os.path.exists(dir):
+                rmdircmd = 'find "%s"* -type d -empty -delete' % dir
+                logger.debug("find -type d -empty -delete command, I would have ran:\n%r", rmdircmd)
 
     exit(0)
 
