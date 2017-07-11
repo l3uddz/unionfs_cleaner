@@ -128,14 +128,14 @@ def upload_manager():
                                 if os.path.exists(dir):
                                     clearing = True
                                     logger.debug("Removing empty directories from %r", dir)
-                                    cmd = 'rclone rmdirs "%s"' % dir
+                                    cmd = 'find "%s"* -type d -empty -delete' % dir
                                     if config['dry_run']:
                                         cmd += ' --dry-run'
                                     utils.run_command(cmd)
                             if clearing:
                                 logger.debug("Finished clearing empty directories")
                         else:
-                            logger.debug("Skipped rclone rmdirs because %d files are currently open", len(opened_files))
+                            logger.debug("Skipped removing empty directories because %d files are currently open", len(opened_files))
 
                     new_size = utils.folder_size(config['local_folder'], config['du_excludes'])
                     logger.debug("Local folder is now left with %d gigabytes", new_size)
