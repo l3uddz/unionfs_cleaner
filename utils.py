@@ -295,7 +295,7 @@ def config_test(config):
         for dir in config['rclone_rmdirs']:
             if os.path.exists(dir):
                 rmdircmd = 'rclone rmdirs "%s"' % dir
-                logger.debug("Rclone move command, I would have ran:\n%r", rmdircmd)
+                logger.debug("Rclone rmdir command, I would have ran:\n%r", rmdircmd)
 
     exit(0)
 
