@@ -133,23 +133,9 @@ def upload_manager():
                     time_taken = timeit.default_timer() - start_time
                     logger.debug("Moving finished in %s", utils.seconds_to_string(time_taken))
 
-                    # rclone rmdirs specified directories
-                    if len(config['rclone_rmdirs']):
-                        opened_files = utils.opened_files(config['local_folder'], config['lsof_excludes'])
-                        if not len(opened_files):
-                            clearing = False
-                            for dir in config['rclone_rmdirs']:
-                                if os.path.exists(dir):
-                                    clearing = True
-                                    logger.debug("Removing empty directories from %r", dir)
-                                    cmd = 'rclone rmdirs "%s"' % dir
-                                    if config['dry_run']:
-                                        cmd += ' --dry-run'
-                                    utils.run_command(cmd)
-                            if clearing:
-                                logger.debug("Finished clearing empty directories")
-                        else:
-                            logger.debug("Skipped rclone rmdirs because %d files are currently open", len(opened_files))
+                    # remove empty directories
+                    if len(config['rclone_remove_empty_on_upload']):
+                        utils.remove_empty_directories(config)
 
                     new_size = utils.folder_size(config['local_folder'], config['du_excludes'])
                     logger.debug("Local folder is now left with %d gigabytes", new_size)
@@ -285,6 +271,9 @@ if __name__ == "__main__":
         for item in sys.argv:
             if item == 'test':
                 utils.config_test(config)
+                exit(0)
+            if item == 'rmdirs':
+                utils.remove_empty_directories(config)
                 exit(0)
 
     logger.debug("Current branch: %s", updater.active_branch())

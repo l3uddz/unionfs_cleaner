@@ -164,6 +164,24 @@ def read_file_text(file):
         return ""
 
 
+def remove_empty_directories(config, force_dry_run=False):
+    open_files = opened_files(config['local_folder'], config['lsof_excludes'])
+    if not len(open_files):
+        clearing = False
+        for dir, depth in config['rclone_remove_empty_on_upload'].items():
+            if os.path.exists(dir):
+                clearing = True
+                logger.debug("Removing empty directories from %r with mindepth %r", dir, depth)
+                cmd = 'find "%s" -mindepth %d -type d -empty' % (dir, depth)
+                if not config['dry_run'] and not force_dry_run:
+                    cmd += ' -delete'
+                os.system(cmd)
+        if clearing:
+            logger.debug("Finished clearing empty directories")
+    else:
+        logger.debug("Skipped removing empty directories because %d files are currently open", len(open_files))
+
+
 ############################################################
 # CONFIG STUFF
 ############################################################
@@ -185,12 +203,12 @@ base_config = {
     ],
     'rclone_transfers': 8,  # number of transfers to use with rclone move (--transfers=8)
     'rclone_checkers': 16,  # number of checkers to use with rclone move (--checkers=16)
-    'rclone_rmdirs': [
-        # folders to clear with rclone rmdirs after upload
-        # remember this folder can be removed too, so always go one step deeper than local_folder
-        '/mnt/local/Media/Movies',
-        '/mnt/local/Media/TV'
-    ],
+    'rclone_remove_empty_on_upload': {
+        # folders to be emptied of empty dirs with customizable mindepth,
+        # e.g. find "/mnt/local/Media/Movies" -mindepth 1 -type d -empty -delete
+        '/mnt/local/Media/Movies': 1,
+        '/mnt/local/Media/TV': 1
+    },
     'rclone_excludes': [
         # exclusions for the rclone move "local_folder" "local_remote"
         '**partial~',
@@ -281,6 +299,10 @@ def config_test(config):
                                      config['rclone_transfers'], config['rclone_checkers'],
                                      config['rclone_excludes'], config['dry_run'])
     logger.debug("Rclone move command, I would have ran:\n%r", upload_cmd)
+
+    # show example of folders that would have been removed after upload
+    logger.debug("I would have removed the following folders after the rclone move:")
+    remove_empty_directories(config, True)
 
     # show example rsync backup that would be used
     if len(config['rsync_backups']):
