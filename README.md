@@ -37,8 +37,8 @@ Example configuration:
     "dry_run": false,
     "du_excludes": [],
     "local_folder": "/mnt/local/Media",
-    "local_folder_check_interval": 2,
-    "local_folder_size": 4,
+    "local_folder_check_interval": 30,
+    "local_folder_size": 150,
     "local_remote": "google:/Media",
     "lsof_excludes": [
         ".partial~"
