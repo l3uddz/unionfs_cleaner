@@ -179,7 +179,8 @@ def remove_empty_directories(config, force_dry_run=False):
         if clearing:
             logger.debug("Finished clearing empty directories")
     else:
-        logger.debug("Skipped removing empty directories because %d files are currently open", len(open_files))
+        logger.debug("Skipped removing empty directories because %d files are currently open: %r", len(open_files),
+                     open_files)
 
 
 ############################################################
