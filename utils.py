@@ -6,6 +6,11 @@ import shlex
 import subprocess
 from urllib import parse
 
+try:
+    from shlex import quote as cmd_quote
+except ImportError:
+    from pipes import quote as cmd_quote
+
 logger = logging.getLogger("UTILS")
 logger.setLevel(logging.DEBUG)
 
@@ -69,7 +74,7 @@ def folder_size(path, excludes):
 
 def rclone_delete(path, dry_run):
     try:
-        cmd = 'rclone delete "%s"' % path
+        cmd = 'rclone delete %s' % cmd_quote(path)
         if dry_run:
             cmd += ' --dry-run'
         process = os.popen(cmd)
@@ -96,7 +101,7 @@ def opened_files(path, excludes):
     files = []
 
     try:
-        process = os.popen('lsof -Fn +D "%s" | tail -n +2 | cut -c2-' % path)
+        process = os.popen('lsof -Fn +D %s | tail -n +2 | cut -c2-' % cmd_quote(path))
         data = process.read()
         process.close()
         for item in data.split('\n'):
@@ -129,14 +134,14 @@ def send_pushover(app_token, user_token, message):
 
 
 def rclone_move_command(local, remote, transfers, checkers, excludes, dry_run):
-    upload_cmd = 'rclone move "%s" "%s"' \
+    upload_cmd = 'rclone move %s %s' \
                  ' --delete-after' \
                  ' --no-traverse' \
                  ' --stats=60s' \
                  ' -v' \
                  ' --transfers=%d' \
                  ' --checkers=%d' % \
-                 (local, remote, transfers, checkers)
+                 (cmd_quote(local), cmd_quote(remote), transfers, checkers)
     for item in excludes:
         upload_cmd += ' --exclude="%s"' % item
     if dry_run:
@@ -148,7 +153,7 @@ def du_size_command(path, excludes):
     size_cmd = "du -s --block-size=1G"
     for item in excludes:
         size_cmd += ' --exclude="%s"' % item
-    size_cmd += ' "%s" | cut -f1' % path
+    size_cmd += ' %s | cut -f1' % cmd_quote(path)
     return size_cmd
 
 
@@ -172,7 +177,7 @@ def remove_empty_directories(config, force_dry_run=False):
             if os.path.exists(dir):
                 clearing = True
                 logger.debug("Removing empty directories from %r with mindepth %r", dir, depth)
-                cmd = 'find "%s" -mindepth %d -type d -empty' % (dir, depth)
+                cmd = 'find %s -mindepth %d -type d -empty' % (cmd_quote(dir), depth)
                 if not config['dry_run'] and not force_dry_run:
                     cmd += ' -delete'
                 os.system(cmd)
@@ -324,7 +329,7 @@ def rsync_backup_command(source, destination, excludes):
     backup_cmd = 'rsync -aAXvP'
     for item in excludes:
         backup_cmd += ' --exclude="%s"' % item
-    backup_cmd += ' "%s" "%s"' % (source, destination)
+    backup_cmd += ' %s %s' % (cmd_quote(source), cmd_quote(destination))
     return backup_cmd
 
 

@@ -37,8 +37,8 @@ Example configuration:
     "dry_run": false,
     "du_excludes": [],
     "local_folder": "/mnt/local/Media",
-    "local_folder_check_interval": 30,
-    "local_folder_size": 150,
+    "local_folder_check_interval": 2,
+    "local_folder_size": 4,
     "local_remote": "google:/Media",
     "lsof_excludes": [
         ".partial~"
@@ -52,20 +52,15 @@ Example configuration:
         ".unionfs/**",
         ".unionfs-fuse/**"
     ],
-    "rclone_rmdirs": [
-        "/mnt/local/Media/Movies",
-        "/mnt/local/Media/TV"
-    ],
+    "rclone_remove_empty_on_upload": {
+        "/mnt/local/Media/Movies": 1,
+        "/mnt/local/Media/TV": 1
+    },
     "rclone_transfers": 8,
     "remote_folder": "google:",
-    "rsync_backup_interval": 24,
+    "rsync_backup_interval": 1,
     "rsync_backups": {
         "/home/seed": [
-            "Downloads*",
-            "torrents*",
-            "plex*",
-            "chunks*",
-            "tmp*",
             "backup*"
         ]
     },
@@ -76,6 +71,7 @@ Example configuration:
     "use_git_autoupdater": true,
     "use_upload_manager": true
 }
+
 ```
 ## _HIDDEN~ cleaner
 
@@ -113,7 +109,7 @@ This feature allows for you to specify a max size limit in GB of your local_fold
 5. rclone_checkers (example: `16`)
 6. rclone_transfers (example: `8`)
 7. rclone_excludes
-8. rclone_rmdirs
+8. rclone_remove_empty_on_upload
 9. du_excludes
 10. lsof_excludes
 11. use_upload_manager
@@ -132,7 +128,7 @@ rclone_transfers is the amount of transfers to use with the rlcone move command.
 
 rclone_excludes are the excludes to be used with the rclone move command.
 
-rclone_rmdirs are the directories to be cleaned after rclone move has completed. This will remove empty directories thus improving the next rclone move. Please remember, to always use directories within your local_folder. If you set this to local_folder then that folder will be removed too if there is no files within in, so never do this.
+rclone_remove_empty_on_upload are the directories and mindepths to be cleaned after rclone move has completed. This will remove empty directories thus improving the next rclone move. Please remember, to always use directories within your local_folder. If you set this to local_folder then that folder could be removed if you set an incorrect mindepth. To check your mindepth, pls do `find 'FOLDER PATH' -mindepth 1 -type d -empty`. This will show you the folders that would have been deleted after the upload.
 
 du_excludes are the excludes to be used with the du command that is used to determine the size of the local_folder. You may want to ignore a specific directory within local_folder when determing the size of local_folder.
 
