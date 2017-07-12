@@ -275,6 +275,9 @@ if __name__ == "__main__":
             if item == 'rmdirs':
                 utils.remove_empty_directories(config)
                 exit(0)
+            if item == 'rmhidden':
+                remove_hidden()
+                exit(0)
 
     logger.debug("Current branch: %s", updater.active_branch())
     logger.debug("Current version: %s", updater.current_version())
