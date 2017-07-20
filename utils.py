@@ -177,7 +177,7 @@ def remove_empty_directories(config, force_dry_run=False):
             if os.path.exists(dir):
                 clearing = True
                 logger.debug("Removing empty directories from %r with mindepth %r", dir, depth)
-                cmd = 'find %s -mindepth %d -type d -empty' % (cmd_quote(dir), depth)
+                cmd = 'find %s -mindepth %d -type d -empty -print' % (cmd_quote(dir), depth)
                 if not config['dry_run'] and not force_dry_run:
                     cmd += ' -delete'
                 os.system(cmd)
