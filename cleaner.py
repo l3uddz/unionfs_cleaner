@@ -135,6 +135,7 @@ def upload_manager():
 
                     # remove empty directories
                     if len(config['rclone_remove_empty_on_upload']):
+                        time.sleep(5)
                         utils.remove_empty_directories(config)
 
                     new_size = utils.folder_size(config['local_folder'], config['du_excludes'])
