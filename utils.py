@@ -180,7 +180,7 @@ def remove_empty_directories(config, force_dry_run=False):
                 cmd = 'find %s -mindepth %d -type d -empty' % (cmd_quote(dir), depth)
                 if not config['dry_run'] and not force_dry_run:
                     cmd += ' -exec rm -vrf {} +'
-                os.system(cmd)
+                run_command(cmd)
         if clearing:
             logger.debug("Finished clearing empty directories")
     else:
