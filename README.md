@@ -38,13 +38,14 @@ Example configuration:
     "du_excludes": [],
     "local_folder": "/mnt/local/Media",
     "local_folder_check_interval": 30,
-    "local_folder_size": 150,
+    "local_folder_size": 450,
     "local_remote": "google:/Media",
     "lsof_excludes": [
         ".partial~"
     ],
     "pushover_app_token": "",
     "pushover_user_token": "",
+    "rclone_bwlimit": "",
     "rclone_checkers": 16,
     "rclone_excludes": [
         "**partial~",
@@ -71,7 +72,6 @@ Example configuration:
     "use_git_autoupdater": true,
     "use_upload_manager": true
 }
-
 ```
 ## _HIDDEN~ cleaner
 
@@ -110,9 +110,10 @@ This feature allows for you to specify a max size limit in GB of your local_fold
 6. rclone_transfers (example: `8`)
 7. rclone_excludes
 8. rclone_remove_empty_on_upload
-9. du_excludes
-10. lsof_excludes
-11. use_upload_manager
+9. rclone_bwlimit
+10. du_excludes
+11. lsof_excludes
+12. use_upload_manager
 
 local_folder is the source to be used for the rclone move command.
 
@@ -129,6 +130,8 @@ rclone_transfers is the amount of transfers to use with the rlcone move command.
 rclone_excludes are the excludes to be used with the rclone move command.
 
 rclone_remove_empty_on_upload are the directories and mindepths to be cleaned after rclone move has completed. This will remove empty directories thus improving the next rclone move. Please remember, to always use directories within your local_folder. If you set this to local_folder then that folder could be removed if you set an incorrect mindepth. To check your mindepth, pls do `find 'FOLDER PATH' -mindepth 1 -type d -empty`. This will show you the folders that would have been deleted after the upload.
+
+rclone_bwlimit allows you to specify a bandwidth limit to use with the rclone move command. Leave this empty to disable it completely.
 
 du_excludes are the excludes to be used with the du command that is used to determine the size of the local_folder. You may want to ignore a specific directory within local_folder when determing the size of local_folder.
 
