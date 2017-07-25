@@ -133,7 +133,7 @@ def send_pushover(app_token, user_token, message):
     return False
 
 
-def rclone_move_command(local, remote, transfers, checkers, excludes, dry_run):
+def rclone_move_command(local, remote, transfers, checkers, bwlimit, excludes, dry_run):
     upload_cmd = 'rclone move %s %s' \
                  ' --delete-after' \
                  ' --no-traverse' \
@@ -142,6 +142,8 @@ def rclone_move_command(local, remote, transfers, checkers, excludes, dry_run):
                  ' --transfers=%d' \
                  ' --checkers=%d' % \
                  (cmd_quote(local), cmd_quote(remote), transfers, checkers)
+    if bwlimit and len(bwlimit):
+        upload_cmd += ' --bwlimit="%s"' % bwlimit
     for item in excludes:
         upload_cmd += ' --exclude="%s"' % item
     if dry_run:
@@ -222,6 +224,7 @@ base_config = {
         '.unionfs/**',
         '.unionfs-fuse/**',
     ],
+    'rclone_bwlimit': '',  # rclone bandwidth limit
     'pushover_user_token': '',  # your pushover user token - upload/backup notifications are sent here
     'pushover_app_token': '',  # your pushover user token - upload/backup notifications are sent here
     'rsync_backup_interval': 24,  # hours until an rsync operation is ran on your backup sources
@@ -301,9 +304,9 @@ def config_test(config):
     size = folder_size(config['local_folder'], config['du_excludes'])
     logger.debug("Local folder size is %d gigabytes", size)
     logger.debug("Testing local_folder, local_remote, rclone_transfers, rclone_checkers, rclone_excludes and dry_run")
-    upload_cmd = rclone_move_command(config['local_folder'], config['local_remote'],
-                                     config['rclone_transfers'], config['rclone_checkers'],
-                                     config['rclone_excludes'], config['dry_run'])
+    upload_cmd = rclone_move_command(config['local_folder'], config['local_remote'], config['rclone_transfers'],
+                                     config['rclone_checkers'], config['rclone_bwlimit'], config['rclone_excludes'],
+                                     config['dry_run'])
     logger.debug("Rclone move command, I would have ran:\n%r", upload_cmd)
 
     # show example of folders that would have been removed after upload

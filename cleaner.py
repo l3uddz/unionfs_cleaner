@@ -125,7 +125,8 @@ def upload_manager():
                     logger.debug("Moving data from %r to %r...", config['local_folder'], config['local_remote'])
                     upload_cmd = utils.rclone_move_command(config['local_folder'], config['local_remote'],
                                                            config['rclone_transfers'], config['rclone_checkers'],
-                                                           config['rclone_excludes'], config['dry_run'])
+                                                           config['rclone_bwlimit'], config['rclone_excludes'],
+                                                           config['dry_run'])
                     logger.debug("Using: %r", upload_cmd)
 
                     start_time = timeit.default_timer()
