@@ -101,7 +101,7 @@ def opened_files(path, excludes):
     files = []
 
     try:
-        process = os.popen('lsof -Fn +D %s | tail -n +2 | cut -c2-' % cmd_quote(path))
+        process = os.popen('lsof -wFn +D %s | tail -n +2 | cut -c2-' % cmd_quote(path))
         data = process.read()
         process.close()
         for item in data.split('\n'):
