@@ -74,7 +74,7 @@ def folder_size(path, excludes):
 
 def rclone_delete(path, dry_run):
     try:
-        cmd = 'rclone delete %s' % cmd_quote(path)
+        cmd = 'rclone delete %s --drive-use-trash' % cmd_quote(path)
         if dry_run:
             cmd += ' --dry-run'
         process = os.popen(cmd)
