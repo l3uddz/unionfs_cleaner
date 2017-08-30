@@ -4,6 +4,7 @@ import logging
 import os
 import shlex
 import subprocess
+import sys
 from urllib import parse
 
 try:
@@ -194,6 +195,8 @@ def remove_empty_directories(config, force_dry_run=False):
 # CONFIG STUFF
 ############################################################
 
+config_path = os.path.join(os.path.dirname(sys.argv[0]), 'config.json')
+
 base_config = {
     'unionfs_folder': '/mnt/local/.unionfs-fuse',  # .unionfs location inside unionfs read/write folder
     'remote_folder': 'google:',  # rclone remote
@@ -244,10 +247,10 @@ base_config = {
 def config_load():
     config = None
 
-    with open('config.json', 'r') as fp:
+    with open(config_path, 'r') as fp:
         config = upgrade_config(json.load(fp))
         fp.close()
-    logger.debug("Loaded config.json")
+    logger.debug("Loaded config.json: %r", config_path)
     return config
 
 
@@ -264,7 +267,7 @@ def upgrade_config(config):
         else:
             new_config[name] = config[name]
 
-    with open('config.json', 'w') as fp:
+    with open(config_path, 'w') as fp:
         json.dump(new_config, fp, indent=4, sort_keys=True)
         fp.close()
 
@@ -274,7 +277,7 @@ def upgrade_config(config):
 
 
 def build_config():
-    with open('config.json', 'w') as fp:
+    with open(config_path, 'w') as fp:
         json.dump(base_config, fp, indent=4, sort_keys=True)
         fp.close()
         logger.debug(

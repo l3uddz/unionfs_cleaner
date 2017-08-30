@@ -34,8 +34,9 @@ logger = rootLogger.getChild("CLEANER")
 logger.setLevel(logging.DEBUG)
 
 # Config
+config_path = os.path.join(os.path.dirname(sys.argv[0]), 'config.json')
 config = None
-if os.path.exists('config.json'):
+if os.path.exists(config_path):
     config = utils.config_load()
 else:
     config = utils.build_config()
