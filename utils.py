@@ -230,13 +230,6 @@ base_config = {
     'rclone_bwlimit': '',  # rclone bandwidth limit
     'pushover_user_token': '',  # your pushover user token - upload/backup notifications are sent here
     'pushover_app_token': '',  # your pushover user token - upload/backup notifications are sent here
-    'rsync_backup_interval': 24,  # hours until an rsync operation is ran on your backup sources
-    'rsync_backups': {
-        # example rclone backup directory + excludes below
-        '/home/seed': ['Downloads*', 'torrents*', 'plex*', 'chunks*', 'tmp*', 'backup*']
-    },
-    'rsync_remote': '/home/seed/backup',  # rsync destination remote
-    'use_backup_manager': False,  # whether or not to start the backup manager upon script start
     'use_config_manager': False,  # whether or not to start the config manager, restart script on config change
     'use_upload_manager': False,  # whether or not to start the upload manager upon script start
     'use_git_autoupdater': False,  # whether to automatically update (git pull) when theres a new commit on script start
@@ -316,36 +309,4 @@ def config_test(config):
     logger.debug("I would have removed the following folders after the rclone move:")
     remove_empty_directories(config, True)
 
-    # show example rsync backup that would be used
-    if len(config['rsync_backups']):
-        logger.debug("Testing rsync_backups and rsync_remote")
-        for source, excludes in config['rsync_backups'].items():
-            if source:
-                rsync_cmd = rsync_backup_command(source, config['rsync_remote'], excludes)
-                logger.debug("Rsync backup source %r. I would have ran:\n%r", source, rsync_cmd)
-
     exit(0)
-
-
-############################################################
-# RSYNC BACKUP STUFF
-############################################################
-
-def rsync_backup_command(source, destination, excludes):
-    backup_cmd = 'rsync -aAXvP'
-    for item in excludes:
-        backup_cmd += ' --exclude="%s"' % item
-    backup_cmd += ' %s %s' % (cmd_quote(source), cmd_quote(destination))
-    return backup_cmd
-
-
-def backup(config):
-    if not config['rsync_remote']:
-        return
-    for source, excludes in config['rsync_backups'].items():
-        logger.debug("Backing up %r excluding: %r", source, excludes)
-        cmd = rsync_backup_command(source, '/home/seed/backup', excludes)
-        if config['dry_run']:
-            cmd += ' --dry-run'
-        logger.debug("Using rsync command: %r", cmd)
-        run_command(cmd)
