@@ -156,38 +156,6 @@ def upload_manager():
     except Exception as ex:
         logger.exception("Exception occurred: ")
 
-
-############################################################
-# BACKUP MANAGER
-############################################################
-
-def backup_manager():
-    try:
-        logger.debug("Started backup manager for %r, %d source locations.", config['rsync_remote'],
-                     len(config['rsync_backups']))
-        while True:
-            time.sleep(60 * (60 * config['rsync_backup_interval']))
-
-            # send start notification
-            if config['pushover_app_token'] and config['pushover_user_token']:
-                utils.send_pushover(config['pushover_app_token'], config['pushover_user_token'],
-                                    "Backup process started for %d source locations." % len(config['rsync_backups']))
-
-            logger.debug("Starting backup process for %d source locations", len(config['rsync_backups']))
-            start_time = timeit.default_timer()
-            utils.backup(config)
-            time_taken = timeit.default_timer() - start_time
-            logger.debug("Backup process finished working, it took %s", utils.seconds_to_string(time_taken))
-
-            # send finish notification
-            if config['pushover_app_token'] and config['pushover_user_token']:
-                utils.send_pushover(config['pushover_app_token'], config['pushover_user_token'],
-                                    "Backup process finished in %s." % utils.seconds_to_string(time_taken))
-
-    except Exception as ex:
-        logger.exception("Exception occurred: ")
-
-
 ############################################################
 # CONFIG MONITOR
 ############################################################
@@ -228,13 +196,6 @@ def start(path):
             upload_process.start()
             processes.append(upload_process.pid)
 
-        # start backup manager
-        backup_process = None
-        if config['use_backup_manager'] and len(config['rsync_backups']):
-            backup_process = Process(target=backup_manager)
-            backup_process.start()
-            processes.append(backup_process.pid)
-
         # start config manager
         config_process = None
         if config['use_config_manager']:
@@ -245,8 +206,6 @@ def start(path):
         # join and wait finish
         if config['use_upload_manager'] and upload_process is not None:
             upload_process.join()
-        if config['use_backup_manager'] and backup_process is not None:
-            backup_process.join()
         if config['use_config_manager'] and config_process is not None:
             config_process.join()
 
