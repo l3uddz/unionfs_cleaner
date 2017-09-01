@@ -228,8 +228,8 @@ base_config = {
         '.unionfs-fuse/**',
     ],
     'rclone_bwlimit': '',  # rclone bandwidth limit
-    'pushover_user_token': '',  # your pushover user token - upload/backup notifications are sent here
-    'pushover_app_token': '',  # your pushover user token - upload/backup notifications are sent here
+    'pushover_user_token': '',  # your pushover user token - upload notifications are sent here
+    'pushover_app_token': '',  # your pushover user token - upload notifications are sent here
     'use_config_manager': False,  # whether or not to start the config manager, restart script on config change
     'use_upload_manager': False,  # whether or not to start the upload manager upon script start
     'use_git_autoupdater': False,  # whether to automatically update (git pull) when theres a new commit on script start
