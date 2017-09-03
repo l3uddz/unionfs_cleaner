@@ -86,6 +86,7 @@ def remove_hidden():
 ############################################################
 
 def upload_manager():
+    global config
     try:
         logger.debug("Started upload manager for %r", config['local_folder'])
         while True:
@@ -131,7 +132,7 @@ def upload_manager():
                     logger.debug("Using: %r", upload_cmd)
 
                     start_time = timeit.default_timer()
-                    utils.run_command(upload_cmd)
+                    utils.run_command(upload_cmd, config)
                     time_taken = timeit.default_timer() - start_time
                     logger.debug("Moving finished in %s", utils.seconds_to_string(time_taken))
 

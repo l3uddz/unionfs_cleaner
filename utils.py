@@ -15,6 +15,9 @@ except ImportError:
 logger = logging.getLogger("UTILS")
 logger.setLevel(logging.DEBUG)
 
+rate_limits_seen = 0
+rate_limit_first_interval = 0
+
 
 ############################################################
 # SCRIPT STUFF
@@ -47,7 +50,14 @@ def get_num(x):
     return int(''.join(ele for ele in x if ele.isdigit() or ele == '.'))
 
 
-def run_command(command):
+def run_command(command, cfg=None):
+    global rate_limits_seen, rate_limit_first_interval
+    cancelled = False
+
+    if cfg and 'move' in command:
+        if not rate_limit_first_interval:
+            rate_limit_first_interval = cfg['local_folder_check_interval']
+
     process = subprocess.Popen(shlex.split(command), shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     while True:
         output = str(process.stdout.readline()).lstrip('b').replace('\\n', '')
@@ -55,6 +65,22 @@ def run_command(command):
             break
         if output and len(output) > 6:
             logger.info(output)
+            if cfg and 'Error 403: User rate limit exceeded' in output:
+                if rate_limits_seen <= 4:
+                    rate_limits_seen += 1
+                else:
+                    logger.error("Error 403 detected 5 times, cancelling upload...")
+                    process.kill()
+                    rate_limits_seen = 0
+                    cancelled = True
+                    cfg['local_folder_check_interval'] *= 2
+                    logger.info("Increased local_folder_check_interval to %d because of rate limits",
+                                cfg['local_folder_check_interval'])
+
+    if cfg and 'move' in command and rate_limit_first_interval < cfg['local_folder_check_interval'] and not cancelled:
+        cfg['local_folder_check_interval'] = rate_limit_first_interval
+        logger.info("Restored local_folder_check_interval to %d because upload wasn't cancelled this time",
+                    rate_limit_first_interval)
 
     rc = process.poll()
     return rc
