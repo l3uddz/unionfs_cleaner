@@ -84,13 +84,28 @@ def remove_hidden():
 ############################################################
 # UPLOAD MANAGER
 ############################################################
+default_check_interval = 0
+
 
 def upload_manager():
-    global config
+    global config, default_check_interval
     try:
+        default_check_interval = config['local_folder_check_interval']
         logger.debug("Started upload manager for %r", config['local_folder'])
         while True:
             time.sleep(60 * config['local_folder_check_interval'])
+
+            # restore check interval to original after an extended sleep after a rate limit ban (25hrs)
+            if config['local_folder_check_interval'] == 1500:
+                config['local_folder_check_interval'] = default_check_interval
+                logger.info("Restored local_folder_check_interval to %d minutes after an extended sleep (25 hours) due "
+                            "to the last upload being cancelled due to rate limits!",
+                            config['local_folder_check_interval'])
+                if config['pushover_app_token'] and config['pushover_user_token']:
+                    utils.send_pushover(config['pushover_app_token'], config['pushover_user_token'],
+                                        "local_folder_check_interval has been reset back to %d minutes after a 25 hour "
+                                        "sleep due to ratelimits!" % config['local_folder_check_interval'])
+
             logger.debug("Checking size of %r", config['local_folder'])
             size = utils.folder_size(config['local_folder'], config['du_excludes'])
             if size is not None and size > 0:

@@ -16,7 +16,6 @@ logger = logging.getLogger("UTILS")
 logger.setLevel(logging.DEBUG)
 
 rate_limits_seen = 0
-rate_limit_first_interval = 0
 
 
 ############################################################
@@ -51,12 +50,7 @@ def get_num(x):
 
 
 def run_command(command, cfg=None):
-    global rate_limits_seen, rate_limit_first_interval
-    cancelled = False
-
-    if cfg and 'move' in command:
-        if not rate_limit_first_interval:
-            rate_limit_first_interval = cfg['local_folder_check_interval']
+    global rate_limits_seen
 
     process = subprocess.Popen(shlex.split(command), shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     while True:
@@ -72,39 +66,15 @@ def run_command(command, cfg=None):
                     logger.error("Error 403 detected 5 times, cancelling upload...")
                     process.kill()
                     rate_limits_seen = 0
-                    cancelled = True
-                    if cfg['local_folder_check_interval'] >= 1500:
-                        cfg['local_folder_check_interval'] = rate_limit_first_interval
-                        logger.info(
-                            "Set local_folder_check_interval back to %d mins because last interval was >= 25hrs",
-                            cfg['local_folder_check_interval'])
-                        # send cancelled notification
-                        if cfg['pushover_app_token'] and cfg['pushover_user_token']:
-                            send_pushover(cfg['pushover_app_token'], cfg['pushover_user_token'],
-                                          "Upload was cancelled due to Error 403 rate limits. local_folder_"
-                                          "check_interval has been set back to %d minutes because the last interval "
-                                          "was already 25 hours or higher. Seems were still banned..." %
-                                          cfg['local_folder_check_interval'])
-                    else:
-                        cfg['local_folder_check_interval'] = 1500
-                        logger.info("Set local_folder_check_interval to %d mins because of rate limits",
-                                    cfg['local_folder_check_interval'])
-                        # send cancelled notification
-                        if cfg['pushover_app_token'] and cfg['pushover_user_token']:
-                            send_pushover(cfg['pushover_app_token'], cfg['pushover_user_token'],
-                                          "Upload was cancelled due to Error 403 rate limits. local_folder_"
-                                          "check_interval has been set to %d minutes." %
-                                          cfg['local_folder_check_interval'])
-
-    if cfg and 'move' in command and rate_limit_first_interval < cfg['local_folder_check_interval'] and not cancelled:
-        cfg['local_folder_check_interval'] = rate_limit_first_interval
-        logger.info("Restored local_folder_check_interval to %d because upload wasn't cancelled this time",
-                    rate_limit_first_interval)
-        # send successful upload since ban notification
-        if cfg['pushover_app_token'] and cfg['pushover_user_token']:
-            send_pushover(cfg['pushover_app_token'], cfg['pushover_user_token'],
-                          "Upload was completed successfully since an Error 403 rate limit ban. local_folder_"
-                          "check_interval has been restored to %d minutes." % cfg['local_folder_check_interval'])
+                    cfg['local_folder_check_interval'] = 1500
+                    logger.info("Set local_folder_check_interval to %d mins because of rate limits",
+                                cfg['local_folder_check_interval'])
+                    # send cancelled notification
+                    if cfg['pushover_app_token'] and cfg['pushover_user_token']:
+                        send_pushover(cfg['pushover_app_token'], cfg['pushover_user_token'],
+                                      "Upload was cancelled due to Error 403 rate limits. local_folder_"
+                                      "check_interval has been set to %d minutes." %
+                                      cfg['local_folder_check_interval'])
 
     rc = process.poll()
     return rc
