@@ -78,7 +78,7 @@ def run_command(command, cfg=None):
                         logger.info(
                             "Set local_folder_check_interval back to %d mins because last interval was >= 25hrs",
                             cfg['local_folder_check_interval'])
-                        # send cancelled notification notification
+                        # send cancelled notification
                         if cfg['pushover_app_token'] and cfg['pushover_user_token']:
                             send_pushover(cfg['pushover_app_token'], cfg['pushover_user_token'],
                                           "Upload was cancelled due to Error 403 rate limits. local_folder_"
@@ -89,7 +89,7 @@ def run_command(command, cfg=None):
                         cfg['local_folder_check_interval'] = 1500
                         logger.info("Set local_folder_check_interval to %d mins because of rate limits",
                                     cfg['local_folder_check_interval'])
-                        # send cancelled notification notification
+                        # send cancelled notification
                         if cfg['pushover_app_token'] and cfg['pushover_user_token']:
                             send_pushover(cfg['pushover_app_token'], cfg['pushover_user_token'],
                                           "Upload was cancelled due to Error 403 rate limits. local_folder_"
@@ -100,7 +100,7 @@ def run_command(command, cfg=None):
         cfg['local_folder_check_interval'] = rate_limit_first_interval
         logger.info("Restored local_folder_check_interval to %d because upload wasn't cancelled this time",
                     rate_limit_first_interval)
-        # send cancelled notification notification
+        # send successful upload since ban notification
         if cfg['pushover_app_token'] and cfg['pushover_user_token']:
             send_pushover(cfg['pushover_app_token'], cfg['pushover_user_token'],
                           "Upload was completed successfully since an Error 403 rate limit ban. local_folder_"
