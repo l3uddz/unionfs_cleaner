@@ -154,15 +154,16 @@ def send_pushover(app_token, user_token, message):
     return False
 
 
-def rclone_move_command(local, remote, transfers, checkers, bwlimit, excludes, dry_run):
+def rclone_move_command(local, remote, transfers, checkers, bwlimit, excludes, chunk_size, dry_run):
     upload_cmd = 'rclone move %s %s' \
                  ' --delete-after' \
                  ' --no-traverse' \
                  ' --stats=60s' \
                  ' -v' \
                  ' --transfers=%d' \
-                 ' --checkers=%d' % \
-                 (cmd_quote(local), cmd_quote(remote), transfers, checkers)
+                 ' --checkers=%d' \
+                 ' --drive-chunk-size=%s' % \
+                 (cmd_quote(local), cmd_quote(remote), transfers, checkers, chunk_size)
     if bwlimit and len(bwlimit):
         upload_cmd += ' --bwlimit="%s"' % bwlimit
     for item in excludes:
@@ -247,6 +248,7 @@ base_config = {
         '.unionfs/**',
         '.unionfs-fuse/**',
     ],
+    'rclone_chunk_size': '8M',  # rclone chunk size, must be a multiple of 2
     'rclone_bwlimit': '',  # rclone bandwidth limit
     'pushover_user_token': '',  # your pushover user token - upload/backup notifications are sent here
     'pushover_app_token': '',  # your pushover user token - upload/backup notifications are sent here
@@ -329,7 +331,7 @@ def config_test(config):
     logger.debug("Testing local_folder, local_remote, rclone_transfers, rclone_checkers, rclone_excludes and dry_run")
     upload_cmd = rclone_move_command(config['local_folder'], config['local_remote'], config['rclone_transfers'],
                                      config['rclone_checkers'], config['rclone_bwlimit'], config['rclone_excludes'],
-                                     config['dry_run'])
+                                     config['rclone_chunk_size'], config['dry_run'])
     logger.debug("Rclone move command, I would have ran:\n%r", upload_cmd)
 
     # show example of folders that would have been removed after upload
