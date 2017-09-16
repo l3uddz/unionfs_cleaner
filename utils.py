@@ -15,6 +15,8 @@ except ImportError:
 logger = logging.getLogger("UTILS")
 logger.setLevel(logging.DEBUG)
 
+rate_limits_seen = 0
+
 
 ############################################################
 # SCRIPT STUFF
@@ -47,7 +49,9 @@ def get_num(x):
     return int(''.join(ele for ele in x if ele.isdigit() or ele == '.'))
 
 
-def run_command(command):
+def run_command(command, cfg=None):
+    global rate_limits_seen
+
     process = subprocess.Popen(shlex.split(command), shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     while True:
         output = str(process.stdout.readline()).lstrip('b').replace('\\n', '')
@@ -55,6 +59,22 @@ def run_command(command):
             break
         if output and len(output) > 6:
             logger.info(output)
+            if cfg and 'Error 403: User rate limit exceeded' in output:
+                if rate_limits_seen <= 4:
+                    rate_limits_seen += 1
+                else:
+                    logger.error("Error 403 detected 5 times, cancelling upload...")
+                    process.kill()
+                    rate_limits_seen = 0
+                    cfg['local_folder_check_interval'] = 1500
+                    logger.info("Set local_folder_check_interval to %d mins because of rate limits",
+                                cfg['local_folder_check_interval'])
+                    # send cancelled notification
+                    if cfg['pushover_app_token'] and cfg['pushover_user_token']:
+                        send_pushover(cfg['pushover_app_token'], cfg['pushover_user_token'],
+                                      "Upload was cancelled due to Error 403 rate limits. local_folder_"
+                                      "check_interval has been set to %d minutes." %
+                                      cfg['local_folder_check_interval'])
 
     rc = process.poll()
     return rc
@@ -134,15 +154,16 @@ def send_pushover(app_token, user_token, message):
     return False
 
 
-def rclone_move_command(local, remote, transfers, checkers, bwlimit, excludes, dry_run):
+def rclone_move_command(local, remote, transfers, checkers, bwlimit, excludes, chunk_size, dry_run):
     upload_cmd = 'rclone move %s %s' \
                  ' --delete-after' \
                  ' --no-traverse' \
                  ' --stats=60s' \
                  ' -v' \
                  ' --transfers=%d' \
-                 ' --checkers=%d' % \
-                 (cmd_quote(local), cmd_quote(remote), transfers, checkers)
+                 ' --checkers=%d' \
+                 ' --drive-chunk-size=%s' % \
+                 (cmd_quote(local), cmd_quote(remote), transfers, checkers, chunk_size)
     if bwlimit and len(bwlimit):
         upload_cmd += ' --bwlimit="%s"' % bwlimit
     for item in excludes:
@@ -227,6 +248,7 @@ base_config = {
         '.unionfs/**',
         '.unionfs-fuse/**',
     ],
+    'rclone_chunk_size': '8M',  # rclone chunk size, must be a multiple of 2
     'rclone_bwlimit': '',  # rclone bandwidth limit
     'pushover_user_token': '',  # your pushover user token - upload notifications are sent here
     'pushover_app_token': '',  # your pushover user token - upload notifications are sent here
@@ -302,7 +324,7 @@ def config_test(config):
     logger.debug("Testing local_folder, local_remote, rclone_transfers, rclone_checkers, rclone_excludes and dry_run")
     upload_cmd = rclone_move_command(config['local_folder'], config['local_remote'], config['rclone_transfers'],
                                      config['rclone_checkers'], config['rclone_bwlimit'], config['rclone_excludes'],
-                                     config['dry_run'])
+                                     config['rclone_chunk_size'], config['dry_run'])
     logger.debug("Rclone move command, I would have ran:\n%r", upload_cmd)
 
     # show example of folders that would have been removed after upload
