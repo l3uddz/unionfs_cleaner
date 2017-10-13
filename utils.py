@@ -282,12 +282,12 @@ def upgrade_config(config):
         else:
             new_config[name] = config[name]
 
-    with open(config_path, 'w') as fp:
-        json.dump(new_config, fp, indent=4, sort_keys=True)
-        fp.close()
-
     if added_fields and len(fields):
+        with open(config_path, 'w') as fp:
+            json.dump(new_config, fp, indent=4, sort_keys=True)
+            fp.close()
         logger.debug("Upgraded config.json, added %d new field(s): %r", added_fields, fields)
+
     return new_config
 
 
