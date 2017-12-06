@@ -8,13 +8,6 @@ Perform automated rsync backups on specified folders after X hours.
 2. requirements.txt modules
 
 # Installation on Ubuntu/Debian
-## Python 3.5.2
-
-1. `wget https://www.python.org/ftp/python/3.5.2/Python-3.5.2.tar.xz`
-2. `tar xvf Python-3.5.2.tar.xz`
-3. `cd Python-3.5.2`
-4. `sudo apt-get install make git build-essential libssl-dev zlib1g-dev libbz2-dev libsqlite3-dev`
-5. `sudo ./configure --enable-loadable-sqlite-extensions && sudo make && sudo make install`
 
 ## unionfs_cleaner
 
@@ -23,8 +16,8 @@ Perform automated rsync backups on specified folders after X hours.
 3. `sudo git clone https://github.com/l3uddz/unionfs_cleaner`
 4. `sudo chown -R user:user unionfs_cleaner`
 5. `cd unionfs_cleaner`
-6. `sudo pip3.5 install -r requirements.txt`
-7. `python3.5 cleaner.py`
+6. `sudo python3 -m pip install -r requirements.txt`
+7. `python3 cleaner.py`
 
 You should now have unionfs_cleaner installed, and by running it for the first time, it will generate a default config.json configuration and exit for you to adjust your config.
 
