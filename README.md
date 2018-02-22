@@ -38,6 +38,7 @@ Example configuration:
     ],
     "pushover_app_token": "",
     "pushover_user_token": "",
+    "slack_webhook_url": "",
     "rclone_bwlimit": "",
     "rclone_checkers": 16,
     "rclone_excludes": [
@@ -165,6 +166,8 @@ The other config options are below:
 pushover_app_token is used to send notifications on start/stop of the uploader & backup manager
 
 pushover_user_token same as above. Both of these entries must be filled for push notifications, leave empty to disable notifications.
+
+slack_webhook_url is used to send notifications on start/stop of the uploader & backup manager.
 
 use_git_autoupdater is used on script start. if enabled, and there is a new git commit, it will update itself then restart.
 

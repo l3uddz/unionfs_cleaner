@@ -101,8 +101,8 @@ def upload_manager():
                 logger.info("Restored local_folder_check_interval to %d minutes after an extended sleep (25 hours) due "
                             "to the last upload being cancelled due to rate limits!",
                             config['local_folder_check_interval'])
-                if config['pushover_app_token'] and config['pushover_user_token']:
-                    utils.send_pushover(config['pushover_app_token'], config['pushover_user_token'],
+
+                utils.send_notification(config,
                                         "local_folder_check_interval has been reset back to %d minutes after a 25 hour "
                                         "sleep due to ratelimits!" % config['local_folder_check_interval'])
 
@@ -121,11 +121,9 @@ def upload_manager():
                         logger.debug("Local folder has %d file(s) open, skipping upload until next check...",
                                      len(opened_files))
                         # send skip notification
-                        if config['pushover_app_token'] and config['pushover_user_token']:
-                            utils.send_pushover(config['pushover_app_token'], config['pushover_user_token'],
-                                                "Upload process of %d gigabytes temporarily skipped.\n"
-                                                "%d file(s) are currently being accessed." %
-                                                (size, len(opened_files)))
+                        utils.send_notification(config, "Upload process of %d gigabytes temporarily skipped.\n"
+                                                        "%d file(s) are currently being accessed." %
+                                                        (size, len(opened_files)))
                         continue
 
                     # remove hidden before upload
@@ -134,9 +132,7 @@ def upload_manager():
                     remove_hidden()
 
                     # send start notification
-                    if config['pushover_app_token'] and config['pushover_user_token']:
-                        utils.send_pushover(config['pushover_app_token'], config['pushover_user_token'],
-                                            "Upload process started. %d gigabytes to upload." % size)
+                    utils.send_notification(config, "Upload process started. %d gigabytes to upload." % size)
 
                     # rclone move local_folder to local_remote
                     logger.debug("Moving data from %r to %r...", config['local_folder'], config['local_remote'])
@@ -160,9 +156,7 @@ def upload_manager():
                     logger.debug("Local folder is now left with %d gigabytes", new_size)
 
                     # send finish notification
-                    if config['pushover_app_token'] and config['pushover_user_token']:
-                        utils.send_pushover(config['pushover_app_token'], config['pushover_user_token'],
-                                            "Upload process finished in %s. %d gigabytes left over." %
+                    utils.send_notification(config, "Upload process finished in %s. %d gigabytes left over." %
                                             (utils.seconds_to_string(time_taken), new_size))
 
                 else:
