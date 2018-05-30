@@ -5,6 +5,7 @@ import os
 import shlex
 import subprocess
 import sys
+import requests
 from urllib import parse
 
 try:
@@ -154,6 +155,23 @@ def send_pushover(app_token, user_token, message):
     return False
 
 
+def send_slack(webhook_url, message):
+    response = requests.post(
+        webhook_url, data=json.dumps({'text': message}),
+        headers={'Content-Type': 'application/json'}
+    )
+    if response.status_code != 200:
+        logger.exception("Error sending notification to slack")
+
+
+def send_notification(config, message):
+    if config['pushover_app_token'] and config['pushover_user_token']:
+        send_pushover(config['pushover_app_token'], config['pushover_user_token'], message)
+
+    if config['slack_webhook_url']:
+        send_slack(config['slack_webhook_url'], message)
+
+
 def rclone_move_command(local, remote, transfers, checkers, bwlimit, excludes, chunk_size, dry_run):
     upload_cmd = 'rclone move %s %s' \
                  ' --delete-after' \
@@ -252,6 +270,7 @@ base_config = {
     'rclone_bwlimit': '',  # rclone bandwidth limit
     'pushover_user_token': '',  # your pushover user token - upload notifications are sent here
     'pushover_app_token': '',  # your pushover user token - upload notifications are sent here
+    'slack_webhook_url': '',  # your slack webhook url - upload notifications are sent here
     'use_config_manager': False,  # whether or not to start the config manager, restart script on config change
     'use_upload_manager': False,  # whether or not to start the upload manager upon script start
     'use_git_autoupdater': False,  # whether to automatically update (git pull) when theres a new commit on script start
